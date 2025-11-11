@@ -1871,9 +1871,7 @@ const Dashboard = () => {
                     style={{
                       width: '100%',
                       height: '2.5rem',
-                      padding: '0.5rem 0.5rem',
-                      paddingLeft: '2.5rem',
-                      paddingRight: '2.5rem',
+                      padding: '0.75rem',
                       border: '1px solid #d1d5db',
                       borderRadius: '0.375rem',
                       fontSize: '0.875rem',
@@ -1986,7 +1984,7 @@ const Dashboard = () => {
                   style={{
                     width: '100%',
                     height: '2.5rem',
-                    padding: '0.5rem 0.5rem',
+                    padding: '0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
@@ -2017,9 +2015,7 @@ const Dashboard = () => {
                     style={{
                       width: '100%',
                       height: '2.5rem',
-                      padding: '0.5rem 0.5rem',
-                      paddingLeft: '2.5rem',
-                      paddingRight: '2.5rem',
+                      padding: '0.75rem',
                       border: '1px solid #d1d5db',
                       borderRadius: '0.375rem',
                       fontSize: '0.875rem',
