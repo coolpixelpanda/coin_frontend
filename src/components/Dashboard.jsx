@@ -133,6 +133,67 @@ const SmoothNumber = ({ value, duration = 1000, decimals = 0, showSign = false }
   )
 }
 
+// Shared function to process chart data consistently
+// The API already returns exactly 24 hourly data points, so we just validate and format
+const processChartData = (historyData, currentPrice, maxPoints = 24) => {
+  if (!historyData || !Array.isArray(historyData) || historyData.length === 0) {
+    return null
+  }
+  
+  // Sort by timestamp to ensure chronological order
+  const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
+  
+  // Validate and filter data points
+  const validData = sortedData.filter(point => 
+    point && 
+    point.timestamp && 
+    point.price && 
+    isFinite(point.price) && 
+    point.price > 0
+  )
+  
+  // Ensure we have at least 2 points
+  if (validData.length < 2) {
+    return null
+  }
+  
+  // Take up to maxPoints (should be 24 for hourly data)
+  let processedData = validData
+  if (validData.length > maxPoints) {
+    // If we have more than maxPoints, sample evenly
+    const step = Math.ceil(validData.length / maxPoints)
+    processedData = validData.filter((_, index) => index % step === 0 || index === validData.length - 1).slice(0, maxPoints)
+  } else if (validData.length < maxPoints && validData.length >= 2) {
+    // If we have less than 24 points but at least 2, use what we have
+    processedData = validData
+  }
+  
+  const now = Date.now()
+  
+  // Format the data
+  const formattedData = processedData.map(item => ({
+    timestamp: item.timestamp,
+    price: Number(item.price),
+    time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }))
+  
+  // Ensure last point matches current price exactly
+  if (formattedData.length > 0 && currentPrice) {
+    formattedData[formattedData.length - 1].price = Number(currentPrice)
+    formattedData[formattedData.length - 1].timestamp = now
+  }
+  
+  // Validate all prices are valid
+  if (!formattedData.every(p => isFinite(p.price) && p.price > 0)) {
+    return null
+  }
+  
+  return formattedData
+}
+
 // Realistic Graph component for 1-day data
 const RealisticGraph = ({ coinId, currentPrice, changes }) => {
   const [graphData, setGraphData] = useState([])
@@ -151,78 +212,50 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
         // Fetch real 24-hour historical data from CoinGecko
         const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
         
-        if (historyData && Array.isArray(historyData) && historyData.length > 0) {
-          // Sort by timestamp to ensure chronological order
-          const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
-          
-          const now = Date.now()
-          const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
-          
-          // Filter to only last 24 hours and use actual data points
-          let filteredData = sortedData.filter(point => 
-            point && 
-            point.timestamp && 
-            point.price && 
-            isFinite(point.price) && 
-            point.price > 0 &&
-            point.timestamp >= twentyFourHoursAgo
-          )
-          
-          // If we have enough data points, use them directly
-          // Otherwise, sample evenly to get about 24 points
-          let processedData = []
-          
-          if (filteredData.length >= 24) {
-            // Use actual data points, sample evenly if too many
-            if (filteredData.length > 50) {
-              const step = Math.floor(filteredData.length / 24)
-              processedData = filteredData.filter((_, index) => index % step === 0 || index === filteredData.length - 1)
-            } else {
-              processedData = filteredData
-            }
-          } else if (filteredData.length >= 2) {
-            // Not enough data points, use what we have
-            processedData = filteredData
-          } else if (sortedData.length >= 2) {
-            // Fallback: use all available data
-            processedData = sortedData.filter(point => 
-              point && point.timestamp && point.price && isFinite(point.price) && point.price > 0
-            )
-          }
-          
-          // Ensure we have at least 2 points
-          if (processedData.length < 2) {
-            loadingRef.current = false
-            setIsLoading(false)
-            return // Don't update if we don't have enough data
-          }
-          
-          // Format the data
-          const formattedData = processedData.map(item => ({
-            timestamp: item.timestamp,
-            price: Number(item.price),
-            time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })
-          }))
-          
-          // Ensure last point matches current price exactly
-          if (formattedData.length > 0) {
-            formattedData[formattedData.length - 1].price = Number(currentPrice)
-            formattedData[formattedData.length - 1].timestamp = now
-          }
-          
-          // Only update if we have valid data
-          if (formattedData.length >= 2 && formattedData.every(p => isFinite(p.price) && p.price > 0)) {
-            setGraphData(formattedData)
-            setIsLoading(false)
-          } else {
-            // Invalid data, keep existing graph data
-            setIsLoading(false)
-          }
+        // Process data using shared function (get all 24 hourly points for small graph)
+        const processedData = processChartData(historyData, currentPrice, 24)
+        
+        if (processedData && processedData.length >= 2) {
+          setGraphData(processedData)
+          setIsLoading(false)
         } else {
-          // No data returned, keep existing graph data
+          // Fallback: generate mathematically correct data if API fails or insufficient data
+          const now = Date.now()
+          const change24h = changes?.change_24h || 0
+          const data = []
+          
+          // Generate exactly 24 hourly data points
+          if (Math.abs(change24h) < 0.01) {
+            for (let i = 23; i >= 0; i--) {
+              const timestamp = now - (i * 60 * 60 * 1000)
+              data.push({
+                timestamp,
+                price: Number(currentPrice),
+                time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              })
+            }
+          } else {
+            const startPrice = Number(currentPrice) / (1 + change24h / 100)
+            
+            for (let i = 23; i >= 0; i--) {
+              const timestamp = now - (i * 60 * 60 * 1000)
+              const progress = (23 - i) / 23
+              const price = startPrice + (Number(currentPrice) - startPrice) * progress
+              
+              data.push({
+                timestamp,
+                price: Math.max(0, price),
+                time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              })
+            }
+          }
+          setGraphData(data)
           setIsLoading(false)
         }
       } catch (error) {
@@ -230,20 +263,15 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
         setIsLoading(false)
         // Fallback: generate mathematically correct data if API fails
         const now = Date.now()
-        const hours = 24
+        const change24h = changes?.change_24h || 0
         const data = []
         
-        // Mathematical formula: if current price is P_current and 24h change is C%,
-        // then starting price P_start = P_current / (1 + C/100)
-        const change24h = changes?.change_24h || 0
-        
-        // Generate exactly 24 hourly data points
         if (Math.abs(change24h) < 0.01) {
           for (let i = 23; i >= 0; i--) {
             const timestamp = now - (i * 60 * 60 * 1000)
             data.push({
               timestamp,
-              price: currentPrice, // Flat line at current price
+              price: Number(currentPrice),
               time: new Date(timestamp).toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -251,17 +279,16 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
             })
           }
         } else {
-          const startPrice = currentPrice / (1 + change24h / 100)
+          const startPrice = Number(currentPrice) / (1 + change24h / 100)
           
           for (let i = 23; i >= 0; i--) {
             const timestamp = now - (i * 60 * 60 * 1000)
             const progress = (23 - i) / 23
-            // Linear interpolation from start to current price
-            const price = startPrice + (currentPrice - startPrice) * progress
+            const price = startPrice + (Number(currentPrice) - startPrice) * progress
             
             data.push({
               timestamp,
-              price: Math.max(0, price), // Ensure non-negative
+              price: Math.max(0, price),
               time: new Date(timestamp).toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -406,55 +433,13 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
         // Fetch historical data for the specific coin (last 24 hours)
         const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
         
-        if (historyData && Array.isArray(historyData) && historyData.length > 0) {
-          // Sort by timestamp to ensure chronological order
-          const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
-          
-          const now = Date.now()
-          const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
-          
-          // Filter to only last 24 hours and use actual data points
-          let filteredData = sortedData.filter(point => 
-            point && 
-            point.timestamp && 
-            point.price && 
-            isFinite(point.price) && 
-            point.price > 0 &&
-            point.timestamp >= twentyFourHoursAgo
-          )
-          
-          // If we have enough data points, use them directly
-          // Otherwise, sample evenly to get about 24-30 points for smooth rendering
-          let processedData = []
-          
-          if (filteredData.length >= 24) {
-            // Use actual data points, sample evenly if too many (max 100 points for performance)
-            if (filteredData.length > 100) {
-              const step = Math.floor(filteredData.length / 100)
-              processedData = filteredData.filter((_, index) => index % step === 0 || index === filteredData.length - 1)
-            } else {
-              processedData = filteredData
-            }
-          } else if (filteredData.length >= 2) {
-            // Not enough data points, use what we have
-            processedData = filteredData
-          } else if (sortedData.length >= 2) {
-            // Fallback: use all available data
-            processedData = sortedData.filter(point => 
-              point && point.timestamp && point.price && isFinite(point.price) && point.price > 0
-            )
-          }
-          
-          // Ensure we have at least 2 points
-          if (processedData.length < 2) {
-            loadingRef.current = false
-            return // Don't update if we don't have enough data
-          }
-          
-          // Format the data
+        // Process data using shared function (get all 24 hourly points for large graph)
+        const processedData = processChartData(historyData, currentPrice, 24)
+        
+        if (processedData && processedData.length >= 2) {
+          // Add additional formatting for large graph
           const formattedData = processedData.map(item => ({
-            timestamp: item.timestamp,
-            price: Number(item.price),
+            ...item,
             time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
               hour: '2-digit', 
               minute: '2-digit',
@@ -477,77 +462,147 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
             })
           }))
           
-          // Ensure last point matches current price exactly
-          if (formattedData.length > 0) {
-            formattedData[formattedData.length - 1].price = Number(currentPrice)
-            formattedData[formattedData.length - 1].timestamp = now
-          }
-          
-          // Only update if we have valid data
-          if (formattedData.length >= 2 && formattedData.every(p => isFinite(p.price) && p.price > 0)) {
-            setGraphData(formattedData)
-          }
-          // If invalid data, keep existing graph data (don't clear it)
+          setGraphData(formattedData)
         } else {
-          // No data returned, keep existing graph data
+          // Fallback: generate mathematically correct data if API fails or insufficient data
+          const now = Date.now()
+          const change24h = changes?.change_24h || 0
+          const data = []
+          
+          // Generate exactly 24 hourly data points
+          if (Math.abs(change24h) < 0.01) {
+            for (let i = 23; i >= 0; i--) {
+              const timestamp = now - (i * 60 * 60 * 1000)
+              data.push({
+                timestamp,
+                price: Number(currentPrice),
+                time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: true
+                }),
+                date: new Date(timestamp).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                }),
+                fullDateTime: new Date(timestamp).toLocaleString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                })
+              })
+            }
+          } else {
+            const startPrice = Number(currentPrice) / (1 + change24h / 100)
+            
+            for (let i = 23; i >= 0; i--) {
+              const timestamp = now - (i * 60 * 60 * 1000)
+              const progress = (23 - i) / 23
+              const price = startPrice + (Number(currentPrice) - startPrice) * progress
+              
+              data.push({
+                timestamp,
+                price: Math.max(0, price),
+                time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: true
+                }),
+                date: new Date(timestamp).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                }),
+                fullDateTime: new Date(timestamp).toLocaleString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                })
+              })
+            }
+          }
+          setGraphData(data)
         }
       } catch (error) {
         console.error('Error loading chart data:', error)
-        // Fallback: generate mathematically correct linear interpolation based on 24h change
+        // Fallback: generate mathematically correct data if API fails
         const now = Date.now()
-        const hours = 24
-        const numPoints = 24
-        const intervalMs = (hours * 60 * 60 * 1000) / numPoints
-        
-        // Mathematical formula: if current price is P_current and 24h change is C%,
-        // then starting price P_start = P_current / (1 + C/100)
         const change24h = changes?.change_24h || 0
-        
-        // If change is essentially zero (within 0.01%), use flat line at current price
-        const isNoChange = Math.abs(change24h) < 0.01
-        
         const data = []
-        // Generate exactly 24 hourly data points
-        for (let i = 23; i >= 0; i--) {
-          const timestamp = now - (i * 60 * 60 * 1000)
-          
-          let price
-          if (isNoChange) {
-            // Flat line at current price when no change
-            price = currentPrice
-          } else {
-            const startPrice = currentPrice / (1 + change24h / 100)
-            const progress = (23 - i) / 23
-            // Linear interpolation from start to current price
-            price = startPrice + (currentPrice - startPrice) * progress
-          }
-          
-          data.push({
-            timestamp,
-            price: Math.max(0, price), // Ensure non-negative
-            time: new Date(timestamp).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: true
-            }),
-            date: new Date(timestamp).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            }),
-            fullDateTime: new Date(timestamp).toLocaleString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          })
-        }
         
+        if (Math.abs(change24h) < 0.01) {
+          for (let i = 23; i >= 0; i--) {
+            const timestamp = now - (i * 60 * 60 * 1000)
+            data.push({
+              timestamp,
+              price: Number(currentPrice),
+              time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true
+              }),
+              date: new Date(timestamp).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              }),
+              fullDateTime: new Date(timestamp).toLocaleString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            })
+          }
+        } else {
+          const startPrice = Number(currentPrice) / (1 + change24h / 100)
+          
+          for (let i = 23; i >= 0; i--) {
+            const timestamp = now - (i * 60 * 60 * 1000)
+            const progress = (23 - i) / 23
+            const price = startPrice + (Number(currentPrice) - startPrice) * progress
+            
+            data.push({
+              timestamp,
+              price: Math.max(0, price),
+              time: new Date(timestamp).toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true
+              }),
+              date: new Date(timestamp).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              }),
+              fullDateTime: new Date(timestamp).toLocaleString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            })
+          }
+        }
         setGraphData(data)
       } finally {
         loadingRef.current = false
@@ -1721,6 +1776,7 @@ const Dashboard = () => {
                     minWidth: 0
                   }}>
                     <RealisticGraph 
+                      key={`${crypto.id}-${data?.price || 'loading'}`}
                       coinId={crypto.id}
                       currentPrice={data?.price}
                       changes={data}
@@ -2871,6 +2927,7 @@ const Dashboard = () => {
                 24-Hour Price Chart
               </h3>
               <LargeGraph 
+                key={`${selectedCoin.id}-${cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price || 'loading'}`}
                 coinId={selectedCoin.id}
                 currentPrice={cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price}
                 changes={cryptoPrices[selectedCoin.id] || selectedCoin.data}

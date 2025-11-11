@@ -188,9 +188,12 @@ export const cryptoAPI = {
   // GET historical price data from CoinGecko
   // coinId: 'bitcoin', 'ethereum', etc.
   // days: 1, 7, 30, 365, or 'max'
+  // For hourly data: use days=7 (returns hourly intervals), then filter to last 24 hours
   getCoinGeckoHistory: async (coinId, days = 1) => {
     try {
-      const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
+      // Use days=7 to get hourly data points (CoinGecko returns hourly intervals for 7 days)
+      // Then we'll filter to get the last 24 hourly points
+      const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7`
       
       const response = await axios.get(url, {
         headers: {
@@ -201,10 +204,62 @@ export const cryptoAPI = {
       // Response format: { prices: [[timestamp, price], ...] }
       const prices = response.data?.prices || []
       
-      return prices.map(([timestamp, price]) => ({
+      // Convert to our format
+      const allData = prices.map(([timestamp, price]) => ({
         timestamp,
         price
       }))
+      
+      // If days=1 was requested, filter to last 24 hours of hourly data
+      if (days === 1) {
+        const now = Date.now()
+        const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
+        
+        // Filter to last 24 hours and get hourly points
+        const last24Hours = allData.filter(point => 
+          point && point.timestamp && point.timestamp >= twentyFourHoursAgo
+        )
+        
+        // Sort by timestamp
+        last24Hours.sort((a, b) => a.timestamp - b.timestamp)
+        
+        // Extract exactly 24 hourly points (one per hour)
+        // Group by hour and take the first point of each hour
+        const hourlyPoints = []
+        const hourInMs = 60 * 60 * 1000
+        
+        for (let i = 0; i < 24; i++) {
+          const targetHourStart = twentyFourHoursAgo + (i * hourInMs)
+          const targetHourEnd = targetHourStart + hourInMs
+          
+          // Find points in this hour
+          const pointsInHour = last24Hours.filter(p => 
+            p.timestamp >= targetHourStart && p.timestamp < targetHourEnd
+          )
+          
+          if (pointsInHour.length > 0) {
+            // Use the first point in the hour (or average if multiple)
+            hourlyPoints.push(pointsInHour[0])
+          }
+        }
+        
+        // If we have exactly 24 points, return them
+        if (hourlyPoints.length === 24) {
+          return hourlyPoints
+        }
+        
+        // Otherwise, sample evenly from available hourly data to get 24 points
+        if (last24Hours.length >= 24) {
+          const step = Math.floor(last24Hours.length / 24)
+          return last24Hours.filter((_, index) => index % step === 0).slice(0, 24)
+        }
+        
+        // If less than 24 points, return what we have
+        return last24Hours.slice(-24)
+      }
+      
+      // For other day ranges, return all data
+      return allData
     } catch (error) {
       console.error('CoinGecko History API error:', error.response?.data || error.message)
       throw error.response?.data || error.message
