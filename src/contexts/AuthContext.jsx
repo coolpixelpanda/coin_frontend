@@ -12,39 +12,31 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
-  // TEMPORARY: Set default user for testing when backend is down
-  // TODO: Remove this default user when backend is back up
-  const [user, setUser] = useState({
-    id: 1,
-    username: 'testuser',
-    email: 'test@example.com',
-    total_amount: 10001
-  })
-  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TEMPORARY: Commented out for testing - backend is down
-    // TODO: Uncomment when backend is back up
-    
     // Check if user is logged in on app start
     // Use sessionStorage instead of localStorage so session expires when tab closes
-    // const token = sessionStorage.getItem('token')
-    // const userData = sessionStorage.getItem('user')
-    // 
-    // if (token && userData) {
-    //   try {
-    //     setUser(JSON.parse(userData))
-    //   } catch (error) {
-    //     sessionStorage.removeItem('token')
-    //     sessionStorage.removeItem('user')
-    //   }
-    // }
-    // setLoading(false)
+    const token = sessionStorage.getItem('token')
+    const userData = sessionStorage.getItem('user')
+    
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData))
+      } catch (error) {
+        sessionStorage.removeItem('token')
+        sessionStorage.removeItem('user')
+      }
+    }
+    setLoading(false)
   }, [])
 
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials)
+      console.log('AuthContext - Full login response:', response)
+      
       const { User_id, Total_amount } = response
       
       // Create user object from API response
@@ -55,19 +47,39 @@ export const AuthProvider = ({ children }) => {
         total_amount: Total_amount
       }
       
-      sessionStorage.setItem('token', 'mock-token')
+      // Extract token from API response (check multiple possible field names)
+      const authToken = response.token || 
+                       response.accessToken || 
+                       response.access_token ||
+                       response.Token ||
+                       response.AccessToken ||
+                       response.Access_Token
+      
+      // If no token is provided by backend, generate a session token based on User_id
+      // This allows the app to work even if backend doesn't return tokens
+      const sessionToken = authToken || `session-${User_id}-${Date.now()}`
+      
+      sessionStorage.setItem('token', sessionToken)
       sessionStorage.setItem('user', JSON.stringify(userData))
       setUser(userData)
       
       return { success: true }
     } catch (error) {
       console.error('AuthContext - Login error:', error)
+      console.error('AuthContext - Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
       
       // Only allow login if user exists in database
       // If API returns error, user doesn't exist
       return { 
         success: false, 
-        error: 'Invalid credentials or user does not exist. Please sign up first.' 
+        error: error.response?.data?.message || 
+               error.response?.data?.error || 
+               error.message || 
+               'Invalid credentials or user does not exist. Please sign up first.' 
       }
     }
   }

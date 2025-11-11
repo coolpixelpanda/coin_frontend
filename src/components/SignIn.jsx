@@ -16,14 +16,12 @@ const SignIn = () => {
   const { login, isAuthenticated, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
-  // TEMPORARY: Commented out - bypass authentication redirect
-  // TODO: Uncomment when backend is back up
   // Redirect to dashboard if already authenticated
-  // useEffect(() => {
-  //   if (!authLoading && isAuthenticated) {
-  //     navigate('/dashboard', { replace: true })
-  //   }
-  // }, [isAuthenticated, authLoading, navigate])
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, authLoading, navigate])
 
   const handleChange = (e) => {
     setFormData({

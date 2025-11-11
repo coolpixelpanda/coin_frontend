@@ -1,78 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle, AlertTriangle, Clock, RefreshCw, Copy, ChevronLeft } from 'lucide-react'
-
-// QR Code generator using proper encoding based on wallet address
-const QRCode = ({ value, size = 200 }) => {
-  // Generate QR code pattern based on actual address data
-  const generateQRPattern = (text) => {
-    // Create a more accurate pattern based on the text
-    const pattern = []
-    const modules = 25 // QR code size
-    
-    // Create hash from text for consistent pattern
-    let hash = 0
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    
-    // Generate pattern based on text characters and position
-    for (let i = 0; i < modules; i++) {
-      pattern.push([])
-      for (let j = 0; j < modules; j++) {
-        // Use text character codes and position to determine cell
-        const charIndex = (i * modules + j) % text.length
-        const charCode = text.charCodeAt(charIndex)
-        const posHash = (hash + i * 7 + j * 11 + charCode) % 3
-        
-        // Create QR-like pattern with finder patterns (corners)
-        let isBlack = false
-        
-        // Finder patterns in corners (7x7 squares)
-        if ((i < 7 && j < 7) || (i < 7 && j >= modules - 7) || (i >= modules - 7 && j < 7)) {
-          // Outer border
-          if (i === 0 || i === 6 || j === 0 || j === 6) {
-            isBlack = true
-          }
-          // Inner 5x5
-          else if (i >= 2 && i <= 4 && j >= 2 && j <= 4) {
-            isBlack = true
-          }
-        }
-        // Data area
-        else {
-          isBlack = posHash === 0 || (posHash === 1 && (i + j) % 2 === 0)
-        }
-        
-        pattern[i].push(isBlack)
-      }
-    }
-    
-    return pattern
-  }
-  
-  const pattern = generateQRPattern(value)
-  const cellSize = size / 25
-  
-  return (
-    <svg width={size} height={size} style={{ border: '1px solid #e5e7eb', backgroundColor: '#ffffff' }}>
-      {pattern.map((row, i) =>
-        row.map((cell, j) => (
-          <rect
-            key={`${i}-${j}`}
-            x={j * cellSize}
-            y={i * cellSize}
-            width={cellSize}
-            height={cellSize}
-            fill={cell ? '#000000' : '#ffffff'}
-          />
-        ))
-      )}
-    </svg>
-  )
-}
+import { QRCodeSVG } from 'qrcode.react'
+import { useNotification } from '../contexts/NotificationContext'
 
 // Generate random wallet address for different cryptocurrencies
 const generateWalletAddress = (cryptoType) => {
@@ -121,9 +51,11 @@ const generateWalletAddress = (cryptoType) => {
 const ExchangeSuccess = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { showNotification } = useNotification()
   const [exchangeData, setExchangeData] = useState(null)
   const [walletAddress, setWalletAddress] = useState('')
   const [countdown, setCountdown] = useState(300) // 5 minutes countdown
+  const [startTime, setStartTime] = useState(null) // Store start time in state
   
   useEffect(() => {
     // Get exchange data from location state
@@ -156,20 +88,34 @@ const ExchangeSuccess = () => {
       // Initialize countdown from sessionStorage or start fresh
       // Use wallet address as key for uniqueness
       const exchangeKey = `exchange_countdown_${address}`
-      const savedCountdown = sessionStorage.getItem(exchangeKey)
       const savedStartTime = sessionStorage.getItem(`${exchangeKey}_start`)
       
-      if (savedCountdown && savedStartTime) {
-        const elapsed = Math.floor((Date.now() - parseInt(savedStartTime)) / 1000)
-        const remaining = Math.max(0, parseInt(savedCountdown) - elapsed)
-        setCountdown(remaining)
-        if (remaining > 0) {
-          sessionStorage.setItem(exchangeKey, remaining.toString())
+      // Clear any old countdown value to avoid conflicts
+      sessionStorage.removeItem(exchangeKey)
+      
+      if (savedStartTime) {
+        // Restore start time from sessionStorage
+        const savedTime = parseInt(savedStartTime)
+        const elapsed = Math.floor((Date.now() - savedTime) / 1000)
+        
+        // If timer expired (more than 5 minutes), start fresh
+        if (elapsed >= 300) {
+          const now = Date.now()
+          setStartTime(now)
+          sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
+          setCountdown(300)
+        } else {
+          // Restore timer with remaining time
+          const remaining = Math.max(0, 300 - elapsed)
+          setStartTime(savedTime)
+          setCountdown(remaining)
         }
       } else {
-        // Save initial countdown and start time
-        sessionStorage.setItem(exchangeKey, '300')
-        sessionStorage.setItem(`${exchangeKey}_start`, Date.now().toString())
+        // Start fresh timer
+        const now = Date.now()
+        setStartTime(now)
+        sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
+        setCountdown(300)
       }
     } else {
       // Redirect to dashboard if no exchange data
@@ -178,18 +124,31 @@ const ExchangeSuccess = () => {
   }, [location.state, navigate])
   
   useEffect(() => {
-    // Countdown timer that saves to sessionStorage
-    if (countdown > 0 && walletAddress) {
-      const timer = setTimeout(() => {
-        const newCountdown = countdown - 1
-        setCountdown(newCountdown)
-        // Save updated countdown using wallet address as key
-        const exchangeKey = `exchange_countdown_${walletAddress}`
-        sessionStorage.setItem(exchangeKey, newCountdown.toString())
-      }, 1000)
-      return () => clearTimeout(timer)
+    // Countdown timer that calculates remaining time based on start time
+    if (!walletAddress || !startTime) {
+      return
     }
-  }, [countdown, walletAddress])
+    
+    // Set up interval to update countdown every second
+    const interval = setInterval(() => {
+      // Calculate remaining time based on actual elapsed time from start
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      const remaining = Math.max(0, 300 - elapsed)
+      
+      setCountdown(remaining)
+      
+      // Update sessionStorage with current remaining time
+      const exchangeKey = `exchange_countdown_${walletAddress}`
+      sessionStorage.setItem(exchangeKey, remaining.toString())
+      
+      // If timer reaches 0, clear interval
+      if (remaining <= 0) {
+        clearInterval(interval)
+      }
+    }, 1000)
+    
+    return () => clearInterval(interval)
+  }, [walletAddress, startTime])
   
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -200,9 +159,10 @@ const ExchangeSuccess = () => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(walletAddress)
-      alert('Wallet address copied to clipboard!')
+      showNotification('Wallet address copied to clipboard!', 'success')
     } catch (err) {
       console.error('Failed to copy: ', err)
+      showNotification('Failed to copy wallet address. Please try again.', 'error')
     }
   }
   
@@ -394,9 +354,20 @@ const ExchangeSuccess = () => {
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
-                marginBottom: '1rem'
+                marginBottom: '1rem',
+                padding: '1rem',
+                backgroundColor: '#ffffff',
+                borderRadius: '0.5rem',
+                border: '1px solid #e5e7eb'
               }}>
-                <QRCode value={walletAddress} size={200} />
+                <QRCodeSVG 
+                  value={walletAddress} 
+                  size={200}
+                  level="M"
+                  includeMargin={true}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                />
               </div>
               <p style={{
                 fontSize: '0.875rem',

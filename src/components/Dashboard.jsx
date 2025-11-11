@@ -136,42 +136,98 @@ const SmoothNumber = ({ value, duration = 1000, decimals = 0, showSign = false }
 // Realistic Graph component for 1-day data
 const RealisticGraph = ({ coinId, currentPrice, changes }) => {
   const [graphData, setGraphData] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const loadingRef = useRef(false)
   
   useEffect(() => {
     const loadRealData = async () => {
-      if (!currentPrice || !coinId) return
+      // Prevent concurrent loads
+      if (loadingRef.current || !currentPrice || !coinId) return
+      
+      loadingRef.current = true
+      setIsLoading(true)
       
       try {
         // Fetch real 24-hour historical data from CoinGecko
         const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
         
-        if (historyData && historyData.length > 0) {
+        if (historyData && Array.isArray(historyData) && historyData.length > 0) {
           // Sort by timestamp to ensure chronological order
-          historyData.sort((a, b) => a.timestamp - b.timestamp)
+          const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
           
-          // Process the data - take every nth point to have reasonable number of points (about 24-30 points)
-          const targetPoints = 24
-          const step = Math.max(1, Math.floor(historyData.length / targetPoints))
-          const processedData = historyData
-            .filter((_, index) => index % step === 0 || index === historyData.length - 1)
-            .map(item => ({
-              timestamp: item.timestamp,
-              price: item.price,
-              time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })
-            }))
+          const now = Date.now()
+          const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
           
-          // Ensure last point matches current price exactly for mathematical accuracy
-          if (processedData.length > 0) {
-            processedData[processedData.length - 1].price = currentPrice
+          // Filter to only last 24 hours and use actual data points
+          let filteredData = sortedData.filter(point => 
+            point && 
+            point.timestamp && 
+            point.price && 
+            isFinite(point.price) && 
+            point.price > 0 &&
+            point.timestamp >= twentyFourHoursAgo
+          )
+          
+          // If we have enough data points, use them directly
+          // Otherwise, sample evenly to get about 24 points
+          let processedData = []
+          
+          if (filteredData.length >= 24) {
+            // Use actual data points, sample evenly if too many
+            if (filteredData.length > 50) {
+              const step = Math.floor(filteredData.length / 24)
+              processedData = filteredData.filter((_, index) => index % step === 0 || index === filteredData.length - 1)
+            } else {
+              processedData = filteredData
+            }
+          } else if (filteredData.length >= 2) {
+            // Not enough data points, use what we have
+            processedData = filteredData
+          } else if (sortedData.length >= 2) {
+            // Fallback: use all available data
+            processedData = sortedData.filter(point => 
+              point && point.timestamp && point.price && isFinite(point.price) && point.price > 0
+            )
           }
           
-          setGraphData(processedData)
+          // Ensure we have at least 2 points
+          if (processedData.length < 2) {
+            loadingRef.current = false
+            setIsLoading(false)
+            return // Don't update if we don't have enough data
+          }
+          
+          // Format the data
+          const formattedData = processedData.map(item => ({
+            timestamp: item.timestamp,
+            price: Number(item.price),
+            time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })
+          }))
+          
+          // Ensure last point matches current price exactly
+          if (formattedData.length > 0) {
+            formattedData[formattedData.length - 1].price = Number(currentPrice)
+            formattedData[formattedData.length - 1].timestamp = now
+          }
+          
+          // Only update if we have valid data
+          if (formattedData.length >= 2 && formattedData.every(p => isFinite(p.price) && p.price > 0)) {
+            setGraphData(formattedData)
+            setIsLoading(false)
+          } else {
+            // Invalid data, keep existing graph data
+            setIsLoading(false)
+          }
+        } else {
+          // No data returned, keep existing graph data
+          setIsLoading(false)
         }
       } catch (error) {
         console.error('Error loading chart data:', error)
+        setIsLoading(false)
         // Fallback: generate mathematically correct data if API fails
         const now = Date.now()
         const hours = 24
@@ -181,10 +237,10 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
         // then starting price P_start = P_current / (1 + C/100)
         const change24h = changes?.change_24h || 0
         
-        // If change is essentially zero (within 0.01%), use flat line at current price
+        // Generate exactly 24 hourly data points
         if (Math.abs(change24h) < 0.01) {
-          for (let i = 0; i <= hours; i++) {
-            const timestamp = now - ((hours - i) * 60 * 60 * 1000)
+          for (let i = 23; i >= 0; i--) {
+            const timestamp = now - (i * 60 * 60 * 1000)
             data.push({
               timestamp,
               price: currentPrice, // Flat line at current price
@@ -197,9 +253,9 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
         } else {
           const startPrice = currentPrice / (1 + change24h / 100)
           
-          for (let i = 0; i <= hours; i++) {
-            const timestamp = now - ((hours - i) * 60 * 60 * 1000)
-            const progress = i / hours
+          for (let i = 23; i >= 0; i--) {
+            const timestamp = now - (i * 60 * 60 * 1000)
+            const progress = (23 - i) / 23
             // Linear interpolation from start to current price
             const price = startPrice + (currentPrice - startPrice) * progress
             
@@ -214,13 +270,16 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
           }
         }
         setGraphData(data)
+        setIsLoading(false)
+      } finally {
+        loadingRef.current = false
       }
     }
     
     loadRealData()
   }, [currentPrice, coinId, changes])
   
-  if (graphData.length === 0) {
+  if (isLoading || graphData.length === 0) {
     return (
       <div style={{ 
         width: '80px', 
@@ -235,11 +294,41 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
     )
   }
   
+  // Safety check: ensure we have at least 2 points
+  if (graphData.length < 2) {
+    return (
+      <div style={{ 
+        width: '150px', 
+        height: '40px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Insufficient data</div>
+      </div>
+    )
+  }
+  
   // Calculate min/max for scaling
-  const prices = graphData.map(d => d.price)
+  const prices = graphData.map(d => d.price).filter(p => isFinite(p) && p > 0)
+  if (prices.length === 0) {
+    return (
+      <div style={{ 
+        width: '150px', 
+        height: '40px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>No valid data</div>
+      </div>
+    )
+  }
+  
   let minPrice = Math.min(...prices)
   let maxPrice = Math.max(...prices)
   let priceRange = maxPrice - minPrice
+  
   // If flat or near-flat, pad the range by ±0.5% to avoid a degenerate chart
   if (!isFinite(priceRange) || priceRange === 0) {
     const pad = (maxPrice || 1) * 0.005
@@ -254,8 +343,8 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
   const padding = 4
   
   const points = graphData.map((point, index) => {
-    const x = padding + (index / (graphData.length - 1)) * (width - 2 * padding)
-    const y = padding + ((maxPrice - point.price) / priceRange) * (height - 2 * padding)
+    const x = padding + (index / Math.max(1, graphData.length - 1)) * (width - 2 * padding)
+    const y = padding + ((maxPrice - point.price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
     return `${x},${y}`
   })
   
@@ -288,8 +377,12 @@ const RealisticGraph = ({ coinId, currentPrice, changes }) => {
         />
         
         {/* Start and end points */}
-        <circle cx={padding} cy={padding + ((maxPrice - graphData[0].price) / priceRange) * (height - 2 * padding)} r="1.5" fill={lineColor} />
-        <circle cx={width-padding} cy={padding + ((maxPrice - graphData[graphData.length-1].price) / priceRange) * (height - 2 * padding)} r="1.5" fill={lineColor} />
+        {graphData.length > 0 && (
+          <>
+            <circle cx={padding} cy={padding + ((maxPrice - graphData[0].price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)} r="1.5" fill={lineColor} />
+            <circle cx={width-padding} cy={padding + ((maxPrice - graphData[graphData.length-1].price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)} r="1.5" fill={lineColor} />
+          </>
+        )}
       </svg>
     </div>
   )
@@ -300,29 +393,68 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
   const [graphData, setGraphData] = useState([])
   const [hoverInfo, setHoverInfo] = useState(null) // { x, y, price, fullDateTime }
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const loadingRef = useRef(false)
   
   useEffect(() => {
     const loadRealData = async () => {
-      if (!currentPrice || !coinId) return
+      // Prevent concurrent loads
+      if (loadingRef.current || !currentPrice || !coinId) return
+      
+      loadingRef.current = true
       
       try {
         // Fetch historical data for the specific coin (last 24 hours)
         const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
         
-        if (historyData && historyData.length > 0) {
-          // Downsample if too many points for performance (keep max 100 points)
-          let processedData = historyData
-          if (processedData.length > 100) {
-            const step = Math.ceil(processedData.length / 100)
-            processedData = processedData.filter((_, index) => index % step === 0 || index === processedData.length - 1)
+        if (historyData && Array.isArray(historyData) && historyData.length > 0) {
+          // Sort by timestamp to ensure chronological order
+          const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
+          
+          const now = Date.now()
+          const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
+          
+          // Filter to only last 24 hours and use actual data points
+          let filteredData = sortedData.filter(point => 
+            point && 
+            point.timestamp && 
+            point.price && 
+            isFinite(point.price) && 
+            point.price > 0 &&
+            point.timestamp >= twentyFourHoursAgo
+          )
+          
+          // If we have enough data points, use them directly
+          // Otherwise, sample evenly to get about 24-30 points for smooth rendering
+          let processedData = []
+          
+          if (filteredData.length >= 24) {
+            // Use actual data points, sample evenly if too many (max 100 points for performance)
+            if (filteredData.length > 100) {
+              const step = Math.floor(filteredData.length / 100)
+              processedData = filteredData.filter((_, index) => index % step === 0 || index === filteredData.length - 1)
+            } else {
+              processedData = filteredData
+            }
+          } else if (filteredData.length >= 2) {
+            // Not enough data points, use what we have
+            processedData = filteredData
+          } else if (sortedData.length >= 2) {
+            // Fallback: use all available data
+            processedData = sortedData.filter(point => 
+              point && point.timestamp && point.price && isFinite(point.price) && point.price > 0
+            )
           }
           
-          // Sort by timestamp to ensure chronological order
-          processedData.sort((a, b) => a.timestamp - b.timestamp)
+          // Ensure we have at least 2 points
+          if (processedData.length < 2) {
+            loadingRef.current = false
+            return // Don't update if we don't have enough data
+          }
           
-          const finalData = processedData.map(item => ({
+          // Format the data
+          const formattedData = processedData.map(item => ({
             timestamp: item.timestamp,
-            price: item.price,
+            price: Number(item.price),
             time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
               hour: '2-digit', 
               minute: '2-digit',
@@ -345,12 +477,19 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
             })
           }))
           
-          // Ensure last point matches current price exactly (for accuracy)
-          if (finalData.length > 0) {
-            finalData[finalData.length - 1].price = currentPrice
+          // Ensure last point matches current price exactly
+          if (formattedData.length > 0) {
+            formattedData[formattedData.length - 1].price = Number(currentPrice)
+            formattedData[formattedData.length - 1].timestamp = now
           }
           
-          setGraphData(finalData)
+          // Only update if we have valid data
+          if (formattedData.length >= 2 && formattedData.every(p => isFinite(p.price) && p.price > 0)) {
+            setGraphData(formattedData)
+          }
+          // If invalid data, keep existing graph data (don't clear it)
+        } else {
+          // No data returned, keep existing graph data
         }
       } catch (error) {
         console.error('Error loading chart data:', error)
@@ -368,8 +507,9 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
         const isNoChange = Math.abs(change24h) < 0.01
         
         const data = []
-        for (let i = 0; i <= numPoints; i++) {
-          const timestamp = now - (hours * 60 * 60 * 1000) + (i * intervalMs)
+        // Generate exactly 24 hourly data points
+        for (let i = 23; i >= 0; i--) {
+          const timestamp = now - (i * 60 * 60 * 1000)
           
           let price
           if (isNoChange) {
@@ -377,7 +517,7 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
             price = currentPrice
           } else {
             const startPrice = currentPrice / (1 + change24h / 100)
-            const progress = i / numPoints
+            const progress = (23 - i) / 23
             // Linear interpolation from start to current price
             price = startPrice + (currentPrice - startPrice) * progress
           }
@@ -409,6 +549,8 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
         }
         
         setGraphData(data)
+      } finally {
+        loadingRef.current = false
       }
     }
     
@@ -431,11 +573,52 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
     )
   }
   
+  // Safety check: ensure we have at least 2 points
+  if (graphData.length < 2) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '300px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f9fafb',
+        borderRadius: '0.5rem'
+      }}>
+        <div style={{ fontSize: '1rem', color: '#6b7280' }}>Insufficient data</div>
+      </div>
+    )
+  }
+  
   // Calculate min/max for scaling
-  const prices = graphData.map(d => d.price)
-  const minPrice = Math.min(...prices)
-  const maxPrice = Math.max(...prices)
-  const priceRange = maxPrice - minPrice
+  const prices = graphData.map(d => d.price).filter(p => isFinite(p) && p > 0)
+  if (prices.length === 0) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '300px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f9fafb',
+        borderRadius: '0.5rem'
+      }}>
+        <div style={{ fontSize: '1rem', color: '#6b7280' }}>No valid data</div>
+      </div>
+    )
+  }
+  
+  let minPrice = Math.min(...prices)
+  let maxPrice = Math.max(...prices)
+  let priceRange = maxPrice - minPrice
+  
+  // If flat or near-flat, pad the range by ±0.5% to avoid a degenerate chart
+  if (!isFinite(priceRange) || priceRange === 0) {
+    const pad = (maxPrice || 1) * 0.005
+    minPrice = (maxPrice || 1) - pad
+    maxPrice = (maxPrice || 1) + pad
+    priceRange = maxPrice - minPrice
+  }
   
   // Create SVG path
   const width = 600
@@ -443,8 +626,8 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
   const padding = 40
   
   const points = graphData.map((point, index) => {
-    const x = padding + (index / (graphData.length - 1)) * (width - 2 * padding)
-    const y = padding + ((maxPrice - point.price) / priceRange) * (height - 2 * padding)
+    const x = padding + (index / Math.max(1, graphData.length - 1)) * (width - 2 * padding)
+    const y = padding + ((maxPrice - point.price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
     return { x, y, ...point }
   })
   
@@ -470,9 +653,9 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
     }
 
     // Convert x back to fractional index across points
-    const normalized = (x - padding) / (width - 2 * padding)
+    const normalized = (x - padding) / Math.max(width - 2 * padding, 1)
     const clamped = Math.max(0, Math.min(1, normalized))
-    const indexFloat = clamped * (points.length - 1)
+    const indexFloat = clamped * Math.max(1, points.length - 1)
     const leftIndex = Math.floor(indexFloat)
     const rightIndex = Math.min(points.length - 1, leftIndex + 1)
     const t = indexFloat - leftIndex
@@ -480,9 +663,14 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
     const left = points[leftIndex]
     const right = points[rightIndex]
 
+    if (!left || !right) {
+      setHoverInfo(null)
+      return
+    }
+
     // Linear interpolation for price, y position, and timestamp
     const price = left.price + (right.price - left.price) * t
-    const yInterpolated = padding + ((maxPrice - price) / priceRange) * (height - 2 * padding)
+    const yInterpolated = padding + ((maxPrice - price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
     const ts = left.timestamp + (right.timestamp - left.timestamp) * t
     const fullDateTime = new Date(ts).toLocaleString('en-US', {
       weekday: 'long',
@@ -608,7 +796,11 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
                 textAnchor="middle"
                 fontWeight="bold"
               >
-                ${hoverInfo.price.toFixed(2)}
+                ${(() => {
+                  // Use 4 decimals for Tether and XRP in tooltip
+                  const decimals = (coinId === 'tether' || coinId === 'ripple') ? 4 : 2
+                  return hoverInfo.price.toFixed(decimals)
+                })()}
               </text>
             </g>
           </>
@@ -617,7 +809,13 @@ const LargeGraph = ({ coinId, currentPrice, changes }) => {
         {/* Y-axis labels with adaptive decimals */}
         {(() => {
           const ticks = [0, 0.25, 0.5, 0.75, 1]
-          const decimals = maxPrice < 0.01 ? 6 : maxPrice < 1 ? 4 : 2
+          // Use 4 decimals for Tether and XRP, otherwise use adaptive decimals
+          let decimals
+          if (coinId === 'tether' || coinId === 'ripple') {
+            decimals = 4
+          } else {
+            decimals = maxPrice < 0.01 ? 6 : maxPrice < 1 ? 4 : 2
+          }
           return ticks.map((ratio, index) => {
             const price = maxPrice - (ratio * priceRange)
             return (
@@ -1053,7 +1251,8 @@ const Dashboard = () => {
                 style={{ 
                   height: '32px', 
                   width: 'auto',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
+                  filter: 'brightness(0)'
                 }} 
               />
               <h1 style={{ 
@@ -1616,7 +1815,7 @@ const Dashboard = () => {
                     style={{
                       width: '100%',
                       height: '2.5rem',
-                      padding: '0.5rem 0.75rem',
+                      padding: '0.5rem 0.5rem',
                       paddingLeft: '2.5rem',
                       paddingRight: '2.5rem',
                       border: '1px solid #d1d5db',
@@ -1670,7 +1869,8 @@ const Dashboard = () => {
                       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                       zIndex: 1000,
                       maxHeight: '250px',
-                      overflowY: 'auto'
+                      overflowY: 'auto',
+                      padding: '0.25rem 0'
                     }}>
                       {[
                         { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
@@ -1730,7 +1930,7 @@ const Dashboard = () => {
                   style={{
                     width: '100%',
                     height: '2.5rem',
-                    padding: '0.5rem 0.75rem',
+                    padding: '0.5rem 0.5rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
@@ -1761,7 +1961,7 @@ const Dashboard = () => {
                     style={{
                       width: '100%',
                       height: '2.5rem',
-                      padding: '0.5rem 0.75rem',
+                      padding: '0.5rem 0.5rem',
                       paddingLeft: '2.5rem',
                       paddingRight: '2.5rem',
                       border: '1px solid #d1d5db',
@@ -1860,7 +2060,8 @@ const Dashboard = () => {
                       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                       zIndex: 1000,
                       maxHeight: '300px',
-                      overflowY: 'auto'
+                      overflowY: 'auto',
+                      padding: '0.25rem 0'
                     }}>
                       <div
                         onClick={() => {
@@ -1889,7 +2090,8 @@ const Dashboard = () => {
                           gap: '0.75rem',
                           cursor: 'pointer',
                           borderBottom: '1px solid #f3f4f6',
-                          transition: 'background-color 0.2s'
+                          transition: 'background-color 0.2s',
+                          marginBottom: '0'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = '#f9fafb'
@@ -2609,7 +2811,7 @@ const Dashboard = () => {
                   fontWeight: '700',
                   color: '#111827'
                 }}>
-                  $<SmoothNumber value={selectedCoin.data?.price} duration={800} decimals={selectedCoin.decimals} />
+                  $<SmoothNumber value={cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price} duration={800} decimals={selectedCoin.decimals} />
                 </div>
               </div>
 
@@ -2653,7 +2855,7 @@ const Dashboard = () => {
                   fontWeight: '700',
                   color: '#4b5563'
                 }}>
-                  <SmoothNumber value={selectedCoin.data?.change_24h} duration={600} decimals={2} showSign={true} />%
+                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_24h ?? selectedCoin.data?.change_24h} duration={600} decimals={2} showSign={true} />%
                 </div>
               </div>
             </div>
@@ -2670,8 +2872,8 @@ const Dashboard = () => {
               </h3>
               <LargeGraph 
                 coinId={selectedCoin.id}
-                currentPrice={selectedCoin.data?.price}
-                changes={selectedCoin.data}
+                currentPrice={cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price}
+                changes={cryptoPrices[selectedCoin.id] || selectedCoin.data}
               />
             </div>
 
@@ -2699,7 +2901,7 @@ const Dashboard = () => {
                   fontWeight: '600',
                   color: '#4b5563'
                 }}>
-                  <SmoothNumber value={selectedCoin.data?.change_1h} duration={600} decimals={2} showSign={true} />%
+                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_1h ?? selectedCoin.data?.change_1h} duration={600} decimals={2} showSign={true} />%
                 </div>
               </div>
 
@@ -2721,7 +2923,7 @@ const Dashboard = () => {
                   fontWeight: '600',
                   color: '#4b5563'
                 }}>
-                  <SmoothNumber value={selectedCoin.data?.change_7d} duration={600} decimals={2} showSign={true} />%
+                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_7d ?? selectedCoin.data?.change_7d} duration={600} decimals={2} showSign={true} />%
                 </div>
               </div>
 
@@ -2743,7 +2945,7 @@ const Dashboard = () => {
                   fontWeight: '600',
                   color: '#111827'
                 }}>
-                  ${selectedCoin.data?.market_cap ? (selectedCoin.data.market_cap / 1e9).toFixed(2) + 'B' : 'N/A'}
+                  ${(cryptoPrices[selectedCoin.id]?.market_cap || selectedCoin.data?.market_cap) ? ((cryptoPrices[selectedCoin.id]?.market_cap || selectedCoin.data?.market_cap) / 1e9).toFixed(2) + 'B' : 'N/A'}
                 </div>
               </div>
 
@@ -2765,7 +2967,7 @@ const Dashboard = () => {
                   fontWeight: '600',
                   color: '#111827'
                 }}>
-                  ${selectedCoin.data?.volume ? (selectedCoin.data.volume / 1e9).toFixed(2) + 'B' : 'N/A'}
+                  ${(cryptoPrices[selectedCoin.id]?.volume || selectedCoin.data?.volume) ? ((cryptoPrices[selectedCoin.id]?.volume || selectedCoin.data?.volume) / 1e9).toFixed(2) + 'B' : 'N/A'}
                 </div>
               </div>
             </div>
