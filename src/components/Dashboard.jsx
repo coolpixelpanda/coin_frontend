@@ -2005,7 +2005,6 @@ const Dashboard = () => {
                   color: '#374151',
                   marginBottom: '0.5rem'
                 }}>
-                  <Wallet size={16} color="#6b7280" />
                   Payment Account
                 </label>
                 <div style={{ position: 'relative' }} data-payment-dropdown ref={paymentDropdownRef}>
