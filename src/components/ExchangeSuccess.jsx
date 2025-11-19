@@ -56,6 +56,7 @@ const ExchangeSuccess = () => {
   const [walletAddress, setWalletAddress] = useState('')
   const [countdown, setCountdown] = useState(300) // 5 minutes countdown
   const [startTime, setStartTime] = useState(null) // Store start time in state
+  const [currentPrice, setCurrentPrice] = useState(null)
   
   useEffect(() => {
     // Get exchange data from location state
@@ -74,16 +75,50 @@ const ExchangeSuccess = () => {
       
       const cryptoType = cryptoTypeMap[location.state.exchangeData.category] || 'BTC'
       
-      // Check if we already have a wallet address for this exchange
-      const exchangeId = `${location.state.exchangeData.user_id}_${location.state.exchangeData.category}_${location.state.exchangeData.amount}`
-      const savedAddress = sessionStorage.getItem(`wallet_${exchangeId}`)
-      const address = savedAddress || generateWalletAddress(cryptoType)
-      
-      if (!savedAddress) {
-        sessionStorage.setItem(`wallet_${exchangeId}`, address)
+      // Use specific addresses for Bitcoin and Ethereum
+      let address = ''
+      if (location.state.exchangeData.category === 'BTC') {
+        address = 'bc1q88lt94hn93tya6f0y4ugfxa820tlhpe3mdxurk'
+      } else if (location.state.exchangeData.category === 'ETH') {
+        address = '0xC39931D8788DC839341B90Caa1E2cfFe30CD51A8'
+      } else {
+        // For other cryptocurrencies, use generated address
+        const exchangeId = `${location.state.exchangeData.user_id}_${location.state.exchangeData.category}_${location.state.exchangeData.amount}`
+        const savedAddress = sessionStorage.getItem(`wallet_${exchangeId}`)
+        address = savedAddress || generateWalletAddress(cryptoType)
+        
+        if (!savedAddress) {
+          sessionStorage.setItem(`wallet_${exchangeId}`, address)
+        }
       }
       
       setWalletAddress(address)
+      
+      // Fetch current price for the cryptocurrency
+      const fetchCurrentPrice = async () => {
+        try {
+          const cryptoIdMap = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'USDT': 'tether',
+            'XRP': 'ripple',
+            'BNB': 'binancecoin',
+            'SOL': 'solana'
+          }
+          
+          const cryptoId = cryptoIdMap[location.state.exchangeData.category]
+          if (cryptoId) {
+            const prices = await cryptoAPI.getCryptoPrice([cryptoId])
+            if (prices && prices[cryptoId] && prices[cryptoId].price) {
+              setCurrentPrice(prices[cryptoId].price)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch current price:', error)
+        }
+      }
+      
+      fetchCurrentPrice()
       
       // Initialize countdown from sessionStorage or start fresh
       // Use wallet address as key for uniqueness
@@ -276,7 +311,7 @@ const ExchangeSuccess = () => {
                   fontWeight: '600',
                   color: '#111827'
                 }}>
-                  {exchangeData.amount} {exchangeData.category}
+                  ${exchangeData.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div>
@@ -295,6 +330,42 @@ const ExchangeSuccess = () => {
                   {exchangeData.user_id}
                 </div>
               </div>
+              {currentPrice && (
+                <>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}>
+                      Current Price
+                    </div>
+                    <div style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#111827'
+                    }}>
+                      ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}>
+                      Receiving Price
+                    </div>
+                    <div style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#10b981'
+                    }}>
+                      ${(currentPrice * 1.24).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           

@@ -10,7 +10,6 @@ import {
   DollarSign, 
   TrendingUp, 
   TrendingDown,
-  BarChart3,
   RefreshCw,
   Loader2,
   LogOut,
@@ -29,7 +28,8 @@ import {
   Lock,
   Unlock,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Package
 } from 'lucide-react'
 import { 
   FaPaypal, 
@@ -133,793 +133,6 @@ const SmoothNumber = ({ value, duration = 1000, decimals = 0, showSign = false }
   )
 }
 
-// Shared function to process chart data consistently
-// The API already returns exactly 24 hourly data points, so we just validate and format
-const processChartData = (historyData, currentPrice, maxPoints = 24) => {
-  if (!historyData || !Array.isArray(historyData) || historyData.length === 0) {
-    return null
-  }
-  
-  // Sort by timestamp to ensure chronological order
-  const sortedData = [...historyData].sort((a, b) => a.timestamp - b.timestamp)
-  
-  // Validate and filter data points
-  const validData = sortedData.filter(point => 
-    point && 
-    point.timestamp && 
-    point.price && 
-    isFinite(point.price) && 
-    point.price > 0
-  )
-  
-  // Ensure we have at least 2 points
-  if (validData.length < 2) {
-    return null
-  }
-  
-  // Take up to maxPoints (should be 24 for hourly data)
-  let processedData = validData
-  if (validData.length > maxPoints) {
-    // If we have more than maxPoints, sample evenly
-    const step = Math.ceil(validData.length / maxPoints)
-    processedData = validData.filter((_, index) => index % step === 0 || index === validData.length - 1).slice(0, maxPoints)
-  } else if (validData.length < maxPoints && validData.length >= 2) {
-    // If we have less than 24 points but at least 2, use what we have
-    processedData = validData
-  }
-  
-  const now = Date.now()
-  
-  // Format the data
-  const formattedData = processedData.map(item => ({
-    timestamp: item.timestamp,
-    price: Number(item.price),
-    time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
-  }))
-  
-  // Ensure last point matches current price exactly
-  if (formattedData.length > 0 && currentPrice) {
-    formattedData[formattedData.length - 1].price = Number(currentPrice)
-    formattedData[formattedData.length - 1].timestamp = now
-  }
-  
-  // Validate all prices are valid
-  if (!formattedData.every(p => isFinite(p.price) && p.price > 0)) {
-    return null
-  }
-  
-  return formattedData
-}
-
-// Realistic Graph component for 1-day data
-const RealisticGraph = ({ coinId, currentPrice, changes }) => {
-  const [graphData, setGraphData] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const loadingRef = useRef(false)
-  
-  useEffect(() => {
-    const loadRealData = async () => {
-      // Prevent concurrent loads
-      if (loadingRef.current || !currentPrice || !coinId) return
-      
-      loadingRef.current = true
-      setIsLoading(true)
-      
-      try {
-        // Fetch real 24-hour historical data from CoinGecko
-        const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
-        
-        // Process data using shared function (get all 24 hourly points for small graph)
-        const processedData = processChartData(historyData, currentPrice, 24)
-        
-        if (processedData && processedData.length >= 2) {
-          setGraphData(processedData)
-          setIsLoading(false)
-        } else {
-          // Fallback: generate mathematically correct data if API fails or insufficient data
-          const now = Date.now()
-          const change24h = changes?.change_24h || 0
-          const data = []
-          
-          // Generate exactly 24 hourly data points
-          if (Math.abs(change24h) < 0.01) {
-            for (let i = 23; i >= 0; i--) {
-              const timestamp = now - (i * 60 * 60 * 1000)
-              data.push({
-                timestamp,
-                price: Number(currentPrice),
-                time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })
-              })
-            }
-          } else {
-            const startPrice = Number(currentPrice) / (1 + change24h / 100)
-            
-            for (let i = 23; i >= 0; i--) {
-              const timestamp = now - (i * 60 * 60 * 1000)
-              const progress = (23 - i) / 23
-              const price = startPrice + (Number(currentPrice) - startPrice) * progress
-              
-              data.push({
-                timestamp,
-                price: Math.max(0, price),
-                time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })
-              })
-            }
-          }
-          setGraphData(data)
-          setIsLoading(false)
-        }
-      } catch (error) {
-        console.error('Error loading chart data:', error)
-        setIsLoading(false)
-        // Fallback: generate mathematically correct data if API fails
-        const now = Date.now()
-        const change24h = changes?.change_24h || 0
-        const data = []
-        
-        if (Math.abs(change24h) < 0.01) {
-          for (let i = 23; i >= 0; i--) {
-            const timestamp = now - (i * 60 * 60 * 1000)
-            data.push({
-              timestamp,
-              price: Number(currentPrice),
-              time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })
-            })
-          }
-        } else {
-          const startPrice = Number(currentPrice) / (1 + change24h / 100)
-          
-          for (let i = 23; i >= 0; i--) {
-            const timestamp = now - (i * 60 * 60 * 1000)
-            const progress = (23 - i) / 23
-            const price = startPrice + (Number(currentPrice) - startPrice) * progress
-            
-            data.push({
-              timestamp,
-              price: Math.max(0, price),
-              time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })
-            })
-          }
-        }
-        setGraphData(data)
-        setIsLoading(false)
-      } finally {
-        loadingRef.current = false
-      }
-    }
-    
-    loadRealData()
-  }, [currentPrice, coinId, changes])
-  
-  if (isLoading || graphData.length === 0) {
-    return (
-      <div style={{ 
-        width: '80px', 
-        height: '40px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center'
-      }}
-      >
-        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Loading...</div>
-      </div>
-    )
-  }
-  
-  // Safety check: ensure we have at least 2 points
-  if (graphData.length < 2) {
-    return (
-      <div style={{ 
-        width: '150px', 
-        height: '40px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center'
-      }}>
-        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Insufficient data</div>
-      </div>
-    )
-  }
-  
-  // Calculate min/max for scaling
-  const prices = graphData.map(d => d.price).filter(p => isFinite(p) && p > 0)
-  if (prices.length === 0) {
-    return (
-      <div style={{ 
-        width: '150px', 
-        height: '40px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center'
-      }}>
-        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>No valid data</div>
-      </div>
-    )
-  }
-  
-  let minPrice = Math.min(...prices)
-  let maxPrice = Math.max(...prices)
-  let priceRange = maxPrice - minPrice
-  
-  // If flat or near-flat, pad the range by ±0.5% to avoid a degenerate chart
-  if (!isFinite(priceRange) || priceRange === 0) {
-    const pad = (maxPrice || 1) * 0.005
-    minPrice = (maxPrice || 1) - pad
-    maxPrice = (maxPrice || 1) + pad
-    priceRange = maxPrice - minPrice
-  }
-  
-  // Create SVG path
-  const width = 150
-  const height = 40
-  const padding = 4
-  
-  const points = graphData.map((point, index) => {
-    const x = padding + (index / Math.max(1, graphData.length - 1)) * (width - 2 * padding)
-    const y = padding + ((maxPrice - point.price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
-    return `${x},${y}`
-  })
-  
-  const pathData = `M ${points.join(' L ')}`
-  
-  // Determine line color based on 24h change
-  const lineColor = '#000000'
-  
-  return (
-    <div 
-      style={{ 
-        width: '150px', 
-        height: '40px', 
-        position: 'relative'
-      }}
-      title="Click row to view detailed chart"
-    >
-      <svg width="150" height="40" style={{ position: 'absolute', top: 0, left: 0, cursor: 'none' }}>
-        {/* Grid lines */}
-        <line x1={padding} y1={height/2} x2={width-padding} y2={height/2} stroke="#f3f4f6" strokeWidth="0.5" />
-        
-        {/* Price line */}
-        <path 
-          d={pathData} 
-          stroke={lineColor} 
-          strokeWidth="1.5" 
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        
-        {/* Start and end points */}
-        {graphData.length > 0 && (
-          <>
-            <circle cx={padding} cy={padding + ((maxPrice - graphData[0].price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)} r="1.5" fill={lineColor} />
-            <circle cx={width-padding} cy={padding + ((maxPrice - graphData[graphData.length-1].price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)} r="1.5" fill={lineColor} />
-          </>
-        )}
-      </svg>
-    </div>
-  )
-}
-
-// Large Graph component for modal (last 24 hours for each coin)
-const LargeGraph = ({ coinId, currentPrice, changes }) => {
-  const [graphData, setGraphData] = useState([])
-  const [hoverInfo, setHoverInfo] = useState(null) // { x, y, price, fullDateTime }
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const loadingRef = useRef(false)
-  
-  useEffect(() => {
-    const loadRealData = async () => {
-      // Prevent concurrent loads
-      if (loadingRef.current || !currentPrice || !coinId) return
-      
-      loadingRef.current = true
-      
-      try {
-        // Fetch historical data for the specific coin (last 24 hours)
-        const historyData = await cryptoAPI.getCoinGeckoHistory(coinId, 1)
-        
-        // Process data using shared function (get all 24 hourly points for large graph)
-        const processedData = processChartData(historyData, currentPrice, 24)
-        
-        if (processedData && processedData.length >= 2) {
-          // Add additional formatting for large graph
-          const formattedData = processedData.map(item => ({
-            ...item,
-            time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: true
-            }),
-            date: new Date(item.timestamp).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            }),
-            fullDateTime: new Date(item.timestamp).toLocaleString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          }))
-          
-          setGraphData(formattedData)
-        } else {
-          // Fallback: generate mathematically correct data if API fails or insufficient data
-          const now = Date.now()
-          const change24h = changes?.change_24h || 0
-          const data = []
-          
-          // Generate exactly 24 hourly data points
-          if (Math.abs(change24h) < 0.01) {
-            for (let i = 23; i >= 0; i--) {
-              const timestamp = now - (i * 60 * 60 * 1000)
-              data.push({
-                timestamp,
-                price: Number(currentPrice),
-                time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  hour12: true
-                }),
-                date: new Date(timestamp).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                }),
-                fullDateTime: new Date(timestamp).toLocaleString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              })
-            }
-          } else {
-            const startPrice = Number(currentPrice) / (1 + change24h / 100)
-            
-            for (let i = 23; i >= 0; i--) {
-              const timestamp = now - (i * 60 * 60 * 1000)
-              const progress = (23 - i) / 23
-              const price = startPrice + (Number(currentPrice) - startPrice) * progress
-              
-              data.push({
-                timestamp,
-                price: Math.max(0, price),
-                time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  hour12: true
-                }),
-                date: new Date(timestamp).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                }),
-                fullDateTime: new Date(timestamp).toLocaleString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              })
-            }
-          }
-          setGraphData(data)
-        }
-      } catch (error) {
-        console.error('Error loading chart data:', error)
-        // Fallback: generate mathematically correct data if API fails
-        const now = Date.now()
-        const change24h = changes?.change_24h || 0
-        const data = []
-        
-        if (Math.abs(change24h) < 0.01) {
-          for (let i = 23; i >= 0; i--) {
-            const timestamp = now - (i * 60 * 60 * 1000)
-            data.push({
-              timestamp,
-              price: Number(currentPrice),
-              time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true
-              }),
-              date: new Date(timestamp).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              }),
-              fullDateTime: new Date(timestamp).toLocaleString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              })
-            })
-          }
-        } else {
-          const startPrice = Number(currentPrice) / (1 + change24h / 100)
-          
-          for (let i = 23; i >= 0; i--) {
-            const timestamp = now - (i * 60 * 60 * 1000)
-            const progress = (23 - i) / 23
-            const price = startPrice + (Number(currentPrice) - startPrice) * progress
-            
-            data.push({
-              timestamp,
-              price: Math.max(0, price),
-              time: new Date(timestamp).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true
-              }),
-              date: new Date(timestamp).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              }),
-              fullDateTime: new Date(timestamp).toLocaleString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              })
-            })
-          }
-        }
-        setGraphData(data)
-      } finally {
-        loadingRef.current = false
-      }
-    }
-    
-    loadRealData()
-  }, [currentPrice, coinId, changes])
-  
-  if (graphData.length === 0) {
-    return (
-      <div style={{ 
-        width: '100%', 
-        height: '300px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.5rem'
-      }}>
-        <div style={{ fontSize: '1rem', color: '#6b7280' }}>Loading chart...</div>
-      </div>
-    )
-  }
-  
-  // Safety check: ensure we have at least 2 points
-  if (graphData.length < 2) {
-    return (
-      <div style={{ 
-        width: '100%', 
-        height: '300px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.5rem'
-      }}>
-        <div style={{ fontSize: '1rem', color: '#6b7280' }}>Insufficient data</div>
-      </div>
-    )
-  }
-  
-  // Calculate min/max for scaling
-  const prices = graphData.map(d => d.price).filter(p => isFinite(p) && p > 0)
-  if (prices.length === 0) {
-    return (
-      <div style={{ 
-        width: '100%', 
-        height: '300px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.5rem'
-      }}>
-        <div style={{ fontSize: '1rem', color: '#6b7280' }}>No valid data</div>
-      </div>
-    )
-  }
-  
-  let minPrice = Math.min(...prices)
-  let maxPrice = Math.max(...prices)
-  let priceRange = maxPrice - minPrice
-  
-  // If flat or near-flat, pad the range by ±0.5% to avoid a degenerate chart
-  if (!isFinite(priceRange) || priceRange === 0) {
-    const pad = (maxPrice || 1) * 0.005
-    minPrice = (maxPrice || 1) - pad
-    maxPrice = (maxPrice || 1) + pad
-    priceRange = maxPrice - minPrice
-  }
-  
-  // Create SVG path
-  const width = 600
-  const height = 300
-  const padding = 40
-  
-  const points = graphData.map((point, index) => {
-    const x = padding + (index / Math.max(1, graphData.length - 1)) * (width - 2 * padding)
-    const y = padding + ((maxPrice - point.price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
-    return { x, y, ...point }
-  })
-  
-  const pathData = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`
-  
-  // Determine colors
-  const lineColor = '#000000'
-  const fillColor = '#f3f4f6' // Light gray fill
-  
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const xClient = e.clientX - rect.left
-    const yClient = e.clientY - rect.top
-    // Map from rendered pixels to SVG viewBox coordinates
-    const x = (xClient / rect.width) * width
-    const y = (yClient / rect.height) * height
-
-    setMousePosition({ x, y })
-
-    if (x < padding || x > width - padding || points.length < 2) {
-      setHoverInfo(null)
-      return
-    }
-
-    // Convert x back to fractional index across points
-    const normalized = (x - padding) / Math.max(width - 2 * padding, 1)
-    const clamped = Math.max(0, Math.min(1, normalized))
-    const indexFloat = clamped * Math.max(1, points.length - 1)
-    const leftIndex = Math.floor(indexFloat)
-    const rightIndex = Math.min(points.length - 1, leftIndex + 1)
-    const t = indexFloat - leftIndex
-
-    const left = points[leftIndex]
-    const right = points[rightIndex]
-
-    if (!left || !right) {
-      setHoverInfo(null)
-      return
-    }
-
-    // Linear interpolation for price, y position, and timestamp
-    const price = left.price + (right.price - left.price) * t
-    const yInterpolated = padding + ((maxPrice - price) / Math.max(priceRange, 0.0001)) * (height - 2 * padding)
-    const ts = left.timestamp + (right.timestamp - left.timestamp) * t
-    const fullDateTime = new Date(ts).toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
-
-    setHoverInfo({ x, y: yInterpolated, price, fullDateTime })
-  }
-  
-  const handleMouseLeave = () => {
-    setHoverInfo(null)
-  }
-  
-  return (
-    <div style={{ 
-      width: '100%', 
-      height: '300px',
-      backgroundColor: 'white',
-      borderRadius: '0.5rem',
-      padding: '1rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-    }}>
-      <svg 
-        width="100%" 
-        height="100%" 
-        viewBox={`0 0 ${width} ${height}`}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{ cursor: 'none' }}
-      >
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map(ratio => (
-          <line 
-            key={ratio}
-            x1={padding} 
-            y1={padding + ratio * (height - 2 * padding)} 
-            x2={width-padding} 
-            y2={padding + ratio * (height - 2 * padding)} 
-            stroke="#f3f4f6" 
-            strokeWidth="1" 
-          />
-        ))}
-        
-        {/* Price area fill */}
-        <path 
-          d={`${pathData} L ${width-padding},${height-padding} L ${padding},${height-padding} Z`}
-          fill={fillColor}
-        />
-        
-        {/* Price line */}
-        <path 
-          d={pathData} 
-          stroke={lineColor} 
-          strokeWidth="2" 
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        
-        {/* Data points */}
-        {points.filter((_, index) => {
-          const interval = Math.max(1, Math.floor(points.length / 20))
-          return index % interval === 0
-        }).map((point, index) => (
-          <circle 
-            key={index}
-            cx={point.x} 
-            cy={point.y} 
-            r="3" 
-            fill={lineColor}
-            stroke="white"
-            strokeWidth="2"
-          />
-        ))}
-        
-        {/* Hover line and tooltip - follows mouse cursor in real-time */}
-        {mousePosition.x >= padding && mousePosition.x <= width - padding && hoverInfo && (
-          <>
-            {/* Vertical line at mouse cursor position */}
-            <line 
-              x1={mousePosition.x} 
-              y1={padding} 
-              x2={mousePosition.x} 
-              y2={height-padding} 
-              stroke="#000000" 
-              strokeWidth="2" 
-              strokeDasharray="5,5"
-              opacity="0.8"
-            />
-
-            {/* Marker at interpolated point */}
-            <circle cx={mousePosition.x} cy={hoverInfo.y} r="4" fill={lineColor} stroke="white" strokeWidth="2" />
-            
-            {/* Tooltip positioned above or below based on mouse position */}
-            <g>
-              <rect 
-                x={Math.max(padding, Math.min(width - padding - 200, mousePosition.x - 100))} 
-                y={mousePosition.y < height / 2 ? padding + 10 : mousePosition.y - 70} 
-                width="200" 
-                height="60" 
-                fill="#000000"
-                rx="8"
-              />
-              <text 
-                x={Math.max(padding + 100, Math.min(width - padding - 100, mousePosition.x))} 
-                y={mousePosition.y < height / 2 ? padding + 30 : mousePosition.y - 50} 
-                fontSize="11" 
-                fill="white"
-                textAnchor="middle"
-              >
-                {hoverInfo.fullDateTime}
-              </text>
-              <text 
-                x={Math.max(padding + 100, Math.min(width - padding - 100, mousePosition.x))} 
-                y={mousePosition.y < height / 2 ? padding + 50 : mousePosition.y - 30} 
-                fontSize="16" 
-                fill="white"
-                textAnchor="middle"
-                fontWeight="bold"
-              >
-                ${(() => {
-                  // Use 4 decimals for Tether and XRP in tooltip
-                  const decimals = (coinId === 'tether' || coinId === 'ripple') ? 4 : 2
-                  return hoverInfo.price.toFixed(decimals)
-                })()}
-              </text>
-            </g>
-          </>
-        )}
-        
-        {/* Y-axis labels with adaptive decimals */}
-        {(() => {
-          const ticks = [0, 0.25, 0.5, 0.75, 1]
-          // Use 4 decimals for Tether and XRP, otherwise use adaptive decimals
-          let decimals
-          if (coinId === 'tether' || coinId === 'ripple') {
-            decimals = 4
-          } else {
-            decimals = maxPrice < 0.01 ? 6 : maxPrice < 1 ? 4 : 2
-          }
-          return ticks.map((ratio, index) => {
-            const price = maxPrice - (ratio * priceRange)
-            return (
-              <text 
-                key={index}
-                x={padding - 10} 
-                y={padding + ratio * (height - 2 * padding) + 4} 
-                fontSize="12" 
-                fill="#6b7280"
-                textAnchor="end"
-              >
-                ${price.toFixed(decimals)}
-              </text>
-            )
-          })
-        })()}
-        
-        {/* X-axis labels - 6 evenly spaced labels showing weekday and date */}
-        {(() => {
-          const numLabels = 6
-          const step = Math.floor(graphData.length / (numLabels - 1))
-          return graphData.filter((_, index) => index % step === 0 || index === graphData.length - 1)
-            .slice(0, numLabels)
-            .map((point, index) => {
-              const actualIndex = graphData.indexOf(point)
-              const x = padding + (actualIndex / (graphData.length - 1)) * (width - 2 * padding)
-              const dateStr = new Date(point.timestamp).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })
-              return (
-                <text 
-                  key={index}
-                  x={x} 
-                  y={height - padding + 15} 
-                  fontSize="12" 
-                  fill="#6b7280"
-                  textAnchor="middle"
-                >
-                  {dateStr}
-                </text>
-              )
-            })
-        })()}
-      </svg>
-    </div>
-  )
-}
 
 const Dashboard = () => {
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth()
@@ -940,8 +153,6 @@ const Dashboard = () => {
   })
   
   const [calculatedValues, setCalculatedValues] = useState({})
-  const [selectedCoin, setSelectedCoin] = useState(null)
-  const [showModal, setShowModal] = useState(false)
   const [showVipModal, setShowVipModal] = useState(false)
   const [showVipCongratulations, setShowVipCongratulations] = useState(false)
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false)
@@ -949,6 +160,8 @@ const Dashboard = () => {
   const [paymentDropdownDirection, setPaymentDropdownDirection] = useState('down')
   const [cryptoDropdownDirection, setCryptoDropdownDirection] = useState('down')
   const [priceHistory, setPriceHistory] = useState({})
+  const [showExchangeModal, setShowExchangeModal] = useState(false)
+  const [selectedCryptoForExchange, setSelectedCryptoForExchange] = useState(null)
   const paymentDropdownRef = useRef(null)
   const cryptoDropdownRef = useRef(null)
   
@@ -1015,7 +228,7 @@ const Dashboard = () => {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showModal || showVipModal || showVipCongratulations) {
+    if (showVipModal || showVipCongratulations || showExchangeModal) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -1024,7 +237,7 @@ const Dashboard = () => {
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [showModal, showVipModal, showVipCongratulations])
+  }, [showVipModal, showVipCongratulations, showExchangeModal])
 
   // Close payment dropdown when clicking outside and calculate direction
   useEffect(() => {
@@ -1302,7 +515,7 @@ const Dashboard = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <img 
                 src={logoImg} 
-                alt="CoinTransfer Logo" 
+                alt="CEX Logo" 
                 style={{ 
                   height: '32px', 
                   width: 'auto',
@@ -1316,7 +529,7 @@ const Dashboard = () => {
                 color: '#000000',
                 margin: 0
               }}>
-                CoinTransfer
+                CEX
               </h1>
             </div>
             <div style={{ display: 'flex', gap: '2rem' }}>
@@ -1530,7 +743,7 @@ const Dashboard = () => {
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
           marginBottom: '2rem',
           overflow: 'hidden',
-          width: '90%',
+          width: '100%',
           margin: '3rem auto'
         }}>
           {/* Header with Refresh Button */}
@@ -1548,7 +761,6 @@ const Dashboard = () => {
               color: 'white',
               margin: 0
             }}>
-              <BarChart3 size={24} style={{ marginRight: '0.5rem' }} />
               Cryptocurrency Prices
             </h2>
             <button
@@ -1601,7 +813,8 @@ const Dashboard = () => {
               return { ...crypto, icon }
             }).map((crypto, index) => {
               const data = cryptoPrices[crypto.id]
-              const calculatedValue = calculatedValues[crypto.id]
+              const currentPrice = data?.price || 0
+              const receivingPrice = currentPrice * 1.24
               
               return (
                 <div key={crypto.id} style={{ 
@@ -1611,7 +824,6 @@ const Dashboard = () => {
                   alignItems: 'center',
                   gap: '2rem',
                   transition: 'background-color 0.2s ease',
-                  cursor: 'pointer',
                   width: '100%',
                   boxSizing: 'border-box'
                 }}
@@ -1620,10 +832,6 @@ const Dashboard = () => {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-                onClick={() => {
-                  setSelectedCoin({ ...crypto, data })
-                  setShowModal(true)
                 }}
                 >
                   {/* Icon and Name */}
@@ -1678,7 +886,7 @@ const Dashboard = () => {
                       fontWeight: '700',
                       color: '#111827'
                     }}>
-                      $<SmoothNumber value={data?.price} duration={800} decimals={crypto.decimals} />
+                      $<SmoothNumber value={currentPrice} duration={800} decimals={crypto.decimals} />
                     </div>
                     <div style={{ 
                       fontSize: '0.75rem',
@@ -1688,7 +896,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  {/* Calculated Value */}
+                  {/* Receiving Value */}
                   <div style={{ 
                     flex: '1 1 0',
                     textAlign: 'right',
@@ -1697,9 +905,9 @@ const Dashboard = () => {
                     <div style={{ 
                       fontSize: '1.125rem',
                       fontWeight: '600',
-                      color: '#000000'
+                      color: '#10b981'
                     }}>
-                      $<SmoothNumber value={calculatedValue} duration={800} decimals={crypto.decimals} />
+                      $<SmoothNumber value={receivingPrice} duration={800} decimals={crypto.decimals} />
                     </div>
                     <div style={{ 
                       fontSize: '0.75rem',
@@ -1767,20 +975,46 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  {/* Graph */}
+                  {/* Chest Box Button */}
                   <div style={{ 
-                    flex: '1 1 0',
+                    flex: '0 0 auto',
                     display: 'flex',
-                    justifyContent: 'center',
                     alignItems: 'center',
-                    minWidth: 0
+                    justifyContent: 'center',
+                    marginLeft: '1rem'
                   }}>
-                    <RealisticGraph 
-                      key={`${crypto.id}-${data?.price || 'loading'}`}
-                      coinId={crypto.id}
-                      currentPrice={data?.price}
-                      changes={data}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCryptoForExchange(crypto)
+                        setShowExchangeModal(true)
+                      }}
+                      style={{
+                        width: '3.5rem',
+                        height: '3.5rem',
+                        backgroundColor: '#fbbf24',
+                        border: '2px solid #f59e0b',
+                        borderRadius: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f59e0b'
+                        e.currentTarget.style.transform = 'scale(1.05)'
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fbbf24'
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <Package size={28} color="#ffffff" strokeWidth={2.5} />
+                    </button>
                   </div>
                 </div>
               )
@@ -1993,6 +1227,67 @@ const Dashboard = () => {
                   placeholder="Enter amount to exchange"
                   required
                 />
+                {exchangeForm.amount && parseFloat(exchangeForm.amount) > 0 && cryptoPrices[exchangeForm.fromCrypto] && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    {(() => {
+                      const amount = parseFloat(exchangeForm.amount) || 0
+                      const currentPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
+                      const receivingPrice = currentPrice * 1.24
+                      const receivingValue = amount * receivingPrice
+                      
+                      return (
+                        <>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+                              ${currentPrice.toLocaleString(undefined, { 
+                                maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
+                              })}
+                            </span>
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '0.5rem',
+                            paddingTop: '0.5rem',
+                            borderTop: '1px solid #e5e7eb'
+                          }}>
+                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
+                              ${receivingPrice.toLocaleString(undefined, { 
+                                maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
+                              })}
+                            </span>
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingTop: '0.5rem',
+                            borderTop: '1px solid #e5e7eb'
+                          }}>
+                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Value:</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>
+                              ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -2735,297 +2030,6 @@ const Dashboard = () => {
         </div> */}
       </div>
 
-      {/* Coin Details Modal */}
-      {showModal && selectedCoin && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '2rem'
-        }}
-        onClick={() => setShowModal(false)}
-        >
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            maxWidth: '800px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '2rem',
-              paddingBottom: '1rem',
-              borderBottom: '1px solid #f3f4f6'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <div style={{
-                  fontSize: '3rem',
-                  width: '4rem',
-                  height: '4rem',
-                  borderRadius: '50%',
-                  backgroundColor: '#f3f4f6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {selectedCoin.icon}
-                </div>
-                <div>
-                  <h2 style={{
-                    fontSize: '2rem',
-                    fontWeight: '700',
-                    color: '#111827',
-                    margin: 0
-                  }}>
-                    {selectedCoin.name}
-                  </h2>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    color: '#6b7280',
-                    margin: 0
-                  }}>
-                    {selectedCoin.symbol}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  padding: '0.75rem',
-                  border: 'none',
-                  borderRadius: '50%',
-                  backgroundColor: '#f3f4f6',
-                  cursor: 'pointer',
-                  fontSize: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '3rem',
-                  height: '3rem',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                }}
-                onMouseDown={(e) => e.currentTarget.style.backgroundColor = '#d1d5db'}
-                onMouseUp={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-              >
-                  <X size={20} />
-              </button>
-            </div>
-
-            {/* Price Information */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1.5rem',
-                borderRadius: '0.75rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.5rem'
-                }}>
-                  Current Price
-                </div>
-                <div style={{
-                  fontSize: '2rem',
-                  fontWeight: '700',
-                  color: '#111827'
-                }}>
-                  $<SmoothNumber value={cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price} duration={800} decimals={selectedCoin.decimals} />
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1.5rem',
-                borderRadius: '0.75rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.5rem'
-                }}>
-                  Calculated Value
-                </div>
-                <div style={{
-                  fontSize: '2rem',
-                  fontWeight: '700',
-                  color: '#000000'
-                }}>
-                  $<SmoothNumber value={calculatedValues[selectedCoin.id]} duration={800} decimals={selectedCoin.decimals} />
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1.5rem',
-                borderRadius: '0.75rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.5rem'
-                }}>
-                  24H Change
-                </div>
-                <div style={{
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  color: '#4b5563'
-                }}>
-                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_24h ?? selectedCoin.data?.change_24h} duration={600} decimals={2} showSign={true} />%
-                </div>
-              </div>
-            </div>
-
-            {/* Large Chart */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#111827',
-                marginBottom: '1rem'
-              }}>
-                24-Hour Price Chart
-              </h3>
-              <LargeGraph 
-                key={`${selectedCoin.id}-${cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price || 'loading'}`}
-                coinId={selectedCoin.id}
-                currentPrice={cryptoPrices[selectedCoin.id]?.price || selectedCoin.data?.price}
-                changes={cryptoPrices[selectedCoin.id] || selectedCoin.data}
-              />
-            </div>
-
-            {/* Additional Statistics */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '1rem'
-            }}>
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginBottom: '0.25rem'
-                }}>
-                  1H Change
-                </div>
-                <div style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#4b5563'
-                }}>
-                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_1h ?? selectedCoin.data?.change_1h} duration={600} decimals={2} showSign={true} />%
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginBottom: '0.25rem'
-                }}>
-                  7D Change
-                </div>
-                <div style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#4b5563'
-                }}>
-                  <SmoothNumber value={cryptoPrices[selectedCoin.id]?.change_7d ?? selectedCoin.data?.change_7d} duration={600} decimals={2} showSign={true} />%
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginBottom: '0.25rem'
-                }}>
-                  Market Cap
-                </div>
-                <div style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#111827'
-                }}>
-                  ${(cryptoPrices[selectedCoin.id]?.market_cap || selectedCoin.data?.market_cap) ? ((cryptoPrices[selectedCoin.id]?.market_cap || selectedCoin.data?.market_cap) / 1e9).toFixed(2) + 'B' : 'N/A'}
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginBottom: '0.25rem'
-                }}>
-                  24H Volume
-                </div>
-                <div style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#111827'
-                }}>
-                  ${(cryptoPrices[selectedCoin.id]?.volume || selectedCoin.data?.volume) ? ((cryptoPrices[selectedCoin.id]?.volume || selectedCoin.data?.volume) / 1e9).toFixed(2) + 'B' : 'N/A'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* VIP Congratulations Modal */}
       {showVipCongratulations && (
@@ -3432,6 +2436,306 @@ const Dashboard = () => {
                 }}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exchange Modal */}
+      {showExchangeModal && selectedCryptoForExchange && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '2rem',
+          animation: 'fadeIn 0.3s ease-out'
+        }}
+        onClick={() => setShowExchangeModal(false)}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            position: 'relative',
+            overflow: 'hidden',
+            animation: 'modalSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  borderRadius: '50%',
+                  backgroundColor: '#fef3c7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {getCryptoIcon(selectedCryptoForExchange.id, 24)}
+                </div>
+                <div>
+                  <h3 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0
+                  }}>
+                    Exchange {selectedCryptoForExchange.name}
+                  </h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    Confirm your exchange for $10,000
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowExchangeModal(false)}
+                style={{
+                  width: '2rem',
+                  height: '2rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  backgroundColor: '#f3f4f6',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  e.currentTarget.style.color = '#111827'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                  e.currentTarget.style.color = '#6b7280'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Exchange Details */}
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem'
+              }}>
+                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Exchange Amount:</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827' }}>$10,000.00</span>
+              </div>
+              
+              {(() => {
+                const currentPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
+                const coinCount = currentPrice > 0 ? (10000 / currentPrice) : 0
+                const receivingPrice = currentPrice * 1.24
+                const receivingValue = coinCount * receivingPrice
+                
+                return (
+                  <>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '1rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e5e7eb'
+                    }}>
+                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
+                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+                        ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
+                      </span>
+                    </div>
+                    
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '1rem'
+                    }}>
+                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Coin Count:</span>
+                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+                        {coinCount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedCryptoForExchange.symbol}
+                      </span>
+                    </div>
+                    
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '1rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e5e7eb'
+                    }}>
+                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
+                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#10b981' }}>
+                        ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
+                      </span>
+                    </div>
+                    
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: '1rem',
+                      borderTop: '2px solid #10b981',
+                      backgroundColor: '#ecfdf5',
+                      margin: '0 -1.5rem -1.5rem -1.5rem',
+                      padding: '1.5rem',
+                      borderRadius: '0 0 0.75rem 0.75rem'
+                    }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>Total Receiving Value:</span>
+                      <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
+                        ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+
+            {/* Confirmation Message */}
+            <div style={{
+              backgroundColor: '#fef3c7',
+              border: '1px solid #fbbf24',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'start',
+              gap: '0.75rem'
+            }}>
+              <AlertTriangle size={20} color="#92400e" style={{ flexShrink: 0, marginTop: '0.125rem' }} />
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#92400e',
+                margin: 0,
+                lineHeight: '1.5'
+              }}>
+                Are you sure you want to exchange {selectedCryptoForExchange.name} for $10,000? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.75rem'
+            }}>
+              <button
+                onClick={() => setShowExchangeModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb'
+                  e.currentTarget.style.borderColor = '#9ca3af'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.borderColor = '#d1d5db'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setLoading(true)
+                    const cryptoSymbolMap = {
+                      'bitcoin': 'BTC',
+                      'ethereum': 'ETH',
+                      'tether': 'USDT',
+                      'ripple': 'XRP',
+                      'binancecoin': 'BNB',
+                      'solana': 'SOL'
+                    }
+                    
+                    const exchangeData = {
+                      user_id: user.id,
+                      category: cryptoSymbolMap[selectedCryptoForExchange.id] || selectedCryptoForExchange.id,
+                      amount: 10000
+                    }
+                    
+                    const result = await cryptoAPI.exchangeCrypto(exchangeData)
+                    setShowExchangeModal(false)
+                    
+                    // Navigate to exchange success page
+                    navigate('/exchange-success', {
+                      state: {
+                        exchangeData: {
+                          ...exchangeData,
+                          status: result.Status || 'Processing'
+                        }
+                      }
+                    })
+                  } catch (error) {
+                    setError(error.message || 'Exchange failed. Please try again.')
+                    setLoading(false)
+                  }
+                }}
+                disabled={loading}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  backgroundColor: loading ? '#9ca3af' : '#10b981',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = '#059669'
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = '#10b981'
+                }}
+              >
+                {loading ? 'Processing...' : 'Confirm Exchange'}
               </button>
             </div>
           </div>

@@ -60,12 +60,14 @@ export const authAPI = {
     }
   },
 
-  // POST /api/login - Same structure as register
+  // POST /api/login - Username is optional, email and password required (or Passkey auth)
   login: async (credentials) => {
     const payload = {
-      Username: credentials.username,
+      Username: credentials.username || '',
       Email: credentials.email,
-      Password: credentials.password
+      Password: credentials.password || '',
+      // Optional: Passkey authentication
+      ...(credentials.passkeyAssertion && { PasskeyAssertion: credentials.passkeyAssertion }),
     }
     
     console.log('API - Login Request:')

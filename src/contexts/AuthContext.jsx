@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
       // Create user object from API response
       const userData = {
         id: User_id,
-        username: credentials.username,
+        username: credentials.username || '',
         email: credentials.email,
         total_amount: Total_amount
       }
@@ -98,10 +98,26 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('AuthContext - Registration error:', error)
       
-      // If registration fails, return error
+      // Check if error is because user already exists
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || ''
+      
+      if (errorMessage.toLowerCase().includes('already exist') || 
+          errorMessage.toLowerCase().includes('duplicate') ||
+          error.response?.status === 409) {
+        // User already exists - this is okay, we'll try to login
+        return { 
+          success: false, 
+          error: 'User already exists',
+          userExists: true
+        }
+      }
+      
+      // If registration fails for other reasons, return error
       return { 
         success: false, 
-        error: 'Registration failed. User may already exist or there was a server error.' 
+        error: errorMessage || 'Registration failed. Please try again.' 
       }
     }
   }

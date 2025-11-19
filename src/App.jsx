@@ -9,6 +9,8 @@ import Dashboard from './components/Dashboard'
 import ExchangeSuccess from './components/ExchangeSuccess'
 import VipTrading from './components/VipTrading'
 import ProtectedRoute from './components/ProtectedRoute'
+import PrivacyPolicy from './components/PrivacyPolicy'
+import UserAgreements from './components/UserAgreements'
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/account-type" element={<AccountTypeSelection />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/user-agreements" element={<UserAgreements />} />
         <Route 
           path="/dashboard" 
           element={

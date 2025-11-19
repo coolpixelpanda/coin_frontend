@@ -36,7 +36,7 @@ const LandingPage = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <img 
                 src={logoImg} 
-                alt="CoinTransfer Logo" 
+                alt="CEX Logo" 
                 style={{ 
                   height: '32px', 
                   width: 'auto',
@@ -49,7 +49,7 @@ const LandingPage = () => {
                 color: '#ffffff',
                 margin: 0
               }}>
-                CoinTransfer
+                CEX
               </h1>
             </div>
             <div style={{ display: 'flex', gap: '2rem' }}>
@@ -240,7 +240,7 @@ const LandingPage = () => {
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <img 
               src={heroMock}
-              alt="CoinTransfer Dashboard preview" 
+              alt="CEX Dashboard preview" 
               style={{ width: '100%', maxWidth: '640px', height: 'auto', borderRadius: '0.75rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
               onError={(e) => { e.currentTarget.src = heroAbstract }}
             />
@@ -252,11 +252,11 @@ const LandingPage = () => {
       <section style={{ padding: '4rem 1rem', background: '#ffffff', borderTop: '1px solid #e5e7eb' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 700, color: '#111827', textAlign: 'center', marginBottom: '0.5rem' }}>From Watching Charts All Day → To Earning in Minutes</h2>
-          <p style={{ color: '#6b7280', textAlign: 'center', marginBottom: '2rem', fontSize: 'clamp(0.95rem, 1.6vw, 1.125rem)' }}>Traditional trading demands constant attention. With CoinTransfer, you convert at live market rates and move on—no full‑time screen watching required.</p>
+          <p style={{ color: '#6b7280', textAlign: 'center', marginBottom: '2rem', fontSize: 'clamp(0.95rem, 1.6vw, 1.125rem)' }}>Traditional trading demands constant attention. With CEX, you convert at live market rates and move on—no full‑time screen watching required.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
             <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1rem' }}>
               <div style={{ fontWeight: 700, color: '#000000', marginBottom: '0.5rem', fontSize: '1.125rem' }}>Before</div>
-              <img src={beforeImg} alt="Before CoinTransfer: monitoring charts full-time" style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', marginBottom: '1rem' }} />
+              <img src={beforeImg} alt="Before CEX: monitoring charts full-time" style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', marginBottom: '1rem' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#000000', marginTop: '0.375rem', flexShrink: 0 }}></div>
@@ -274,7 +274,7 @@ const LandingPage = () => {
             </div>
             <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1rem' }}>
               <div style={{ fontWeight: 700, color: '#000000', marginBottom: '0.5rem', fontSize: '1.125rem' }}>After</div>
-              <img src={afterImg} alt="After CoinTransfer: quick conversion in minutes" style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', marginBottom: '1rem' }} />
+              <img src={afterImg} alt="After CEX: quick conversion in minutes" style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', marginBottom: '1rem' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#000000', marginTop: '0.375rem', flexShrink: 0 }}></div>
@@ -345,7 +345,7 @@ const LandingPage = () => {
             }}>
               <img 
                 src={aboutUsImg} 
-                alt="About CoinTransfer" 
+                alt="About CEX" 
                 style={{ 
                   width: '100%', 
                   maxWidth: '600px', 
@@ -364,7 +364,7 @@ const LandingPage = () => {
                 marginBottom: '1.5rem',
                 lineHeight: '1.2'
               }}>
-                About CoinTransfer
+                About CEX
               </h2>
               <p style={{ 
                 fontSize: 'clamp(1rem, 2vw, 1.125rem)', 
@@ -372,7 +372,7 @@ const LandingPage = () => {
                 marginBottom: '1.5rem',
                 lineHeight: '1.7'
               }}>
-                CoinTransfer revolutionizes the cryptocurrency exchange experience by offering lightning-fast conversions and unmatched rates. Unlike traditional trading platforms that require hours or even days to process transactions, we deliver your cash within <strong style={{ color: '#000000' }}>shortly</strong> of initiating an exchange.
+                CEX revolutionizes the cryptocurrency exchange experience by offering lightning-fast conversions and unmatched rates. Unlike traditional trading platforms that require hours or even days to process transactions, we deliver your cash within <strong style={{ color: '#000000' }}>shortly</strong> of initiating an exchange.
               </p>
               <p style={{ 
                 fontSize: 'clamp(1rem, 2vw, 1.125rem)', 
@@ -380,7 +380,7 @@ const LandingPage = () => {
                 marginBottom: '1.5rem',
                 lineHeight: '1.7'
               }}>
-                What truly sets CoinTransfer apart is our commitment to providing <strong style={{ color: '#000000' }}>the best rates in the market</strong>. While other platforms offer rates at or below current coin prices, we consistently provide rates that exceed market value. This means you get more cash for your cryptocurrency compared to any other exchange platform—a value proposition that's unmatched in the industry.
+                What truly sets CEX apart is our commitment to providing <strong style={{ color: '#000000' }}>the best rates in the market</strong>. While other platforms offer rates at or below current coin prices, we consistently provide rates that exceed market value. This means you get more cash for your cryptocurrency compared to any other exchange platform—a value proposition that's unmatched in the industry.
               </p>
               <p style={{ 
                 fontSize: 'clamp(1rem, 2vw, 1.125rem)', 
@@ -388,7 +388,7 @@ const LandingPage = () => {
                 marginBottom: '1.5rem',
                 lineHeight: '1.7'
               }}>
-                Our instant exchange technology eliminates the waiting game. No need to monitor charts, wait for optimal trading windows, or navigate complex trading interfaces. Simply select your cryptocurrency, choose your payout method, and receive your funds almost immediately. With CoinTransfer, converting coins to cash has never been faster, easier, or more profitable.
+                Our instant exchange technology eliminates the waiting game. No need to monitor charts, wait for optimal trading windows, or navigate complex trading interfaces. Simply select your cryptocurrency, choose your payout method, and receive your funds almost immediately. With CEX, converting coins to cash has never been faster, easier, or more profitable.
               </p>
               <div style={{ 
                 display: 'flex', 
@@ -470,7 +470,7 @@ const LandingPage = () => {
             color: '#111827',
             marginBottom: '1rem'
           }}>
-            Why Choose CoinTransfer?
+            Why Choose CEX?
           </h2>
           <p style={{ 
             fontSize: 'clamp(0.95rem, 1.6vw, 1.125rem)', 
@@ -653,7 +653,7 @@ const LandingPage = () => {
             color: '#eeeeee',
             marginBottom: '2rem'
           }}>
-            Join thousands of users who trust CoinTransfer for their crypto needs
+            Join thousands of users who trust CEX for their crypto needs
           </p>
           <Link
             to="/account-type"
@@ -699,7 +699,7 @@ const LandingPage = () => {
             fontWeight: 'bold', 
             marginBottom: '1rem'
           }}>
-            CoinTransfer
+            CEX
           </h3>
           <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
             Secure cryptocurrency exchange platform
