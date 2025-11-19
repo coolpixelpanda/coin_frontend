@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { cryptoAPI } from '../services/api'
 import logoImg from '../Images/logo.webp'
+import goldenChestImg from '../Images/golden_chest.png'
 import { 
   Bitcoin, 
   Coins, 
@@ -28,8 +29,7 @@ import {
   Lock,
   Unlock,
   Sparkles,
-  ChevronDown,
-  Package
+  ChevronDown
 } from 'lucide-react'
 import { 
   FaPaypal, 
@@ -990,30 +990,31 @@ const Dashboard = () => {
                         setShowExchangeModal(true)
                       }}
                       style={{
-                        width: '3.5rem',
-                        height: '3.5rem',
-                        backgroundColor: '#fbbf24',
-                        border: '2px solid #f59e0b',
-                        borderRadius: '0.5rem',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        transition: 'transform 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f59e0b'
-                        e.currentTarget.style.transform = 'scale(1.05)'
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
+                        e.currentTarget.style.transform = 'scale(1.1)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#fbbf24'
                         e.currentTarget.style.transform = 'scale(1)'
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     >
-                      <Package size={28} color="#ffffff" strokeWidth={2.5} />
+                      <img 
+                        src={goldenChestImg} 
+                        alt="Golden Chest" 
+                        style={{
+                          width: '4rem',
+                          height: '4rem',
+                          objectFit: 'contain'
+                        }}
+                      />
                     </button>
                   </div>
                 </div>
