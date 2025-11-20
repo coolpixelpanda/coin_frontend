@@ -66,7 +66,7 @@ const Notification = ({ message, type = 'success', duration = 3000, onClose }) =
         position: 'fixed',
         top: '1rem',
         right: '1rem',
-        zIndex: 10000,
+        zIndex: 100000,
         minWidth: '300px',
         maxWidth: '500px',
         backgroundColor: colorScheme.bg,

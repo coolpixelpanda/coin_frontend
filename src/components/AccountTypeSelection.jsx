@@ -12,28 +12,28 @@ const AccountTypeSelection = () => {
       title: 'Personal',
       description: 'Trade crypto as an individual.',
       icon: <User size={24} />,
-      color: '#000000'
+      color: '#00CDCB'
     },
     {
       id: 'business',
       title: 'Business',
       description: 'For small businesses and startups.',
       icon: <Building2 size={24} />,
-      color: '#000000'
+      color: '#00CDCB'
     },
     {
       id: 'institutional',
       title: 'Institutional',
       description: 'Recommended for larger institutions.',
       icon: <BarChart3 size={24} />,
-      color: '#000000'
+      color: '#00CDCB'
     },
     {
       id: 'developer',
       title: 'Developer',
       description: 'Build onchain using developer tooling.',
       icon: <Zap size={24} />,
-      color: '#000000'
+      color: '#00CDCB'
     }
   ]
 
@@ -58,7 +58,7 @@ const AccountTypeSelection = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ 
             fontSize: '2rem', 
-            fontWeight: 'bold', 
+            fontWeight: '400', 
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
@@ -88,10 +88,13 @@ const AccountTypeSelection = () => {
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 boxShadow: selectedType === type.id ? `0 4px 12px ${type.color}20` : '0 1px 3px rgba(0,0,0,0.1)',
-                transform: selectedType === type.id ? 'translateY(-2px)' : 'translateY(0)'
+                transform: selectedType === type.id ? 'translateY(-2px)' : 'translateY(0)',
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: '80px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                 <div style={{
                   width: '48px',
                   height: '48px',
@@ -101,23 +104,27 @@ const AccountTypeSelection = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '1.5rem',
-                  color: type.color
+                  color: type.color,
+                  flexShrink: 0
                 }}>
                   {type.icon}
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3 style={{ 
                     fontSize: '1.125rem', 
-                    fontWeight: '600', 
+                    fontWeight: '400', 
                     color: '#111827',
-                    marginBottom: '0.25rem'
+                    marginBottom: '0.25rem',
+                    margin: 0,
+                    lineHeight: '1.4'
                   }}>
                     {type.title}
                   </h3>
                   <p style={{ 
                     color: '#6b7280',
                     fontSize: '0.875rem',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.4'
                   }}>
                     {type.description}
                   </p>
@@ -132,7 +139,8 @@ const AccountTypeSelection = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
+                    flexShrink: 0
                   }}>
                     <Check size={16} />
                   </div>
@@ -170,7 +178,7 @@ const AccountTypeSelection = () => {
             disabled={!selectedType}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: selectedType ? '#000000' : '#9ca3af',
+              backgroundColor: selectedType ? '#00CDCB' : '#9ca3af',
               color: 'white',
               border: 'none',
               borderRadius: '0.5rem',
@@ -178,13 +186,14 @@ const AccountTypeSelection = () => {
               fontWeight: '500',
               cursor: selectedType ? 'pointer' : 'not-allowed',
               flex: 2,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              boxShadow: selectedType ? '0 4px 14px rgba(0, 205, 203, 0.3)' : 'none'
             }}
             onMouseEnter={(e) => {
-              if (selectedType) e.currentTarget.style.backgroundColor = '#1a1a1a'
+              if (selectedType) e.currentTarget.style.backgroundColor = '#00B8B6'
             }}
             onMouseLeave={(e) => {
-              if (selectedType) e.currentTarget.style.backgroundColor = '#000000'
+              if (selectedType) e.currentTarget.style.backgroundColor = '#00CDCB'
             }}
             onMouseDown={(e) => {
               if (selectedType) e.currentTarget.style.backgroundColor = '#333333'

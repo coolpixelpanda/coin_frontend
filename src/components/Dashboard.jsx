@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { cryptoAPI } from '../services/api'
-import logoImg from '../Images/logo.webp'
+import logoImg from '../Images/logo.png'
 import goldenChestImg from '../Images/golden_chest.png'
+import vipImg from '../Images/vip.png'
 import { 
   Bitcoin, 
   Coins, 
@@ -125,7 +126,7 @@ const SmoothNumber = ({ value, duration = 1000, decimals = 0, showSign = false }
 
   return (
     <span style={{ 
-      color: isAnimating ? '#000000' : '#111827',
+      color: isAnimating ? '#00CDCB' : '#111827',
       transition: 'color 0.3s ease'
     }}>
       {formatValue(displayValue)}
@@ -165,8 +166,27 @@ const Dashboard = () => {
   const paymentDropdownRef = useRef(null)
   const cryptoDropdownRef = useRef(null)
   
-  // Check if user qualifies for VIP (balance >= $10,000)
-  const isVipEligible = Number(user?.total_amount || 0) >= 10000
+  // Check if user qualifies for VIP (balance >= $100,000)
+  const isVipEligible = Number(user?.total_amount || 0) >= 100000
+
+  // Generate consistent color from email (hash-based)
+  const getAvatarColor = (email) => {
+    if (!email) return '#00CDCB'
+    let hash = 0
+    for (let i = 0; i < email.length; i++) {
+      hash = email.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    // Generate a bright color palette
+    const colors = [
+      '#00CDCB', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739',
+      '#52BE80', '#F1948A', '#5DADE2', '#F39C12', '#E74C3C'
+    ]
+    return colors[Math.abs(hash) % colors.length]
+  }
+
+  const avatarColor = getAvatarColor(user?.email)
+  const avatarLetter = user?.email ? user.email.charAt(0).toUpperCase() : 'U'
   
   const [exchangeForm, setExchangeForm] = useState({
     fromCrypto: 'bitcoin',
@@ -211,11 +231,11 @@ const Dashboard = () => {
     const previousBalance = previousBalanceRef.current
     const hasSeenCongratulations = localStorage.getItem('vipCongratulationsSeen') === 'true'
     
-    // Show congratulations modal when balance crosses the $10,000 threshold
+    // Show congratulations modal when balance crosses the $100,000 threshold
     // Or on initial load if already at/above threshold
     // Only show once (check localStorage)
-    if (portfolioBalance >= 10000 && !hasSeenCongratulations) {
-      if (previousBalance === null || previousBalance < 10000) {
+    if (portfolioBalance >= 100000 && !hasSeenCongratulations) {
+      if (previousBalance === null || previousBalance < 100000) {
         // User just crossed the threshold or initial load with qualifying balance
         setShowVipCongratulations(true)
         localStorage.setItem('vipCongratulationsSeen', 'true')
@@ -490,6 +510,22 @@ const Dashboard = () => {
             transform: scale(1.2);
           }
         }
+        @keyframes vipGlow {
+          0%, 100% {
+            box-shadow: 0 0 20px ${avatarColor}80, 0 0 40px ${avatarColor}40, 0 4px 12px rgba(0,0,0,0.15);
+          }
+          50% {
+            box-shadow: 0 0 30px ${avatarColor}CC, 0 0 60px ${avatarColor}80, 0 6px 20px rgba(0,0,0,0.2);
+          }
+        }
+        @keyframes pulseLock {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+        }
       `}</style>
       <div style={{ 
         minHeight: '100vh', 
@@ -500,189 +536,148 @@ const Dashboard = () => {
       <header style={{ 
         backgroundColor: 'white', 
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        borderBottom: '1px solid #e5e7eb'
+        borderBottom: '1px solid #e5e7eb',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
       }}>
         <div style={{ 
-          maxWidth: '1280px', 
+          maxWidth: '1120px', 
           margin: '0 auto',
           padding: '0 1rem',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
-          height: '64px'
+          height: '64px',
+          gap: '1rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <img 
-                src={logoImg} 
-                alt="CEX Logo" 
-                style={{ 
-                  height: '32px', 
-                  width: 'auto',
-                  objectFit: 'contain',
-                  filter: 'brightness(0)'
-                }} 
-              />
-              <h1 style={{ 
-                fontSize: '1.5rem', 
-                fontWeight: 'bold', 
-                color: '#000000',
-                margin: 0
-              }}>
-                CEX
-              </h1>
-            </div>
-            <div style={{ display: 'flex', gap: '2rem' }}>
-              <Link
-                to="/"
-                style={{
-                  color: '#374151',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer',
-                  padding: '0.5rem 0',
-                  borderBottom: '2px solid transparent'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#111827'
-                  e.currentTarget.style.borderBottomColor = '#111827'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#374151'
-                  e.currentTarget.style.borderBottomColor = 'transparent'
-                }}
-              >
-                Home
-              </Link>
-              <Link
-                to="/dashboard"
-                style={{
-                  color: '#374151',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer',
-                  padding: '0.5rem 0',
-                  borderBottom: '2px solid transparent'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#111827'
-                  e.currentTarget.style.borderBottomColor = '#111827'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#374151'
-                  e.currentTarget.style.borderBottomColor = 'transparent'
-                }}
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={() => {
-                  if (isVipEligible) {
-                    // Navigate to VIP trading page when unlocked
-                    navigate('/vip-trading')
-                  } else {
-                    // Show locked modal when locked
-                    setShowVipModal(true)
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  backgroundColor: isVipEligible ? '#dcfce7' : '#fef3c7',
-                  border: isVipEligible ? '1px solid #22c55e' : '1px solid #fbbf24',
-                  borderRadius: '0.5rem',
-                  color: isVipEligible ? '#166534' : '#92400e',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  opacity: 0.8,
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1'
-                  e.currentTarget.style.backgroundColor = isVipEligible ? '#bbf7d0' : '#fde68a'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0.8'
-                  e.currentTarget.style.backgroundColor = isVipEligible ? '#dcfce7' : '#fef3c7'
-                }}
-                title={isVipEligible ? "VIP Trading (Unlocked)" : "VIP Trading (Locked)"}
-              >
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}>
-                  <Star 
-                    size={14} 
-                    fill={isVipEligible ? "#22c55e" : "#fbbf24"} 
-                    style={{
-                      animation: 'starTwinkle 1.5s ease-in-out infinite',
-                      animationDelay: '0s'
-                    }}
-                  />
-                  <span>VIP trading</span>
-                  <Star 
-                    size={14} 
-                    fill={isVipEligible ? "#22c55e" : "#fbbf24"} 
-                    style={{
-                      animation: 'starTwinkle 1.5s ease-in-out infinite',
-                      animationDelay: '0.75s'
-                    }}
-                  />
-                </div>
-                {isVipEligible ? <Unlock size={14} /> : <Lock size={14} />}
-              </button>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Welcome, {user?.username}
-            </div>
-            <button
-              onClick={handleLogout}
+          {/* User Avatar */}
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <div
               style={{
-                padding: '0.5rem 1rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.375rem',
-                backgroundColor: 'white',
-                color: '#374151',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: avatarColor,
+                color: 'white',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s'
+                justifyContent: 'center',
+                fontSize: '1.125rem',
+                fontWeight: '400',
+                boxShadow: isVipEligible 
+                  ? `0 0 20px ${avatarColor}80, 0 0 40px ${avatarColor}40, 0 4px 12px rgba(0,0,0,0.15)` 
+                  : '0 2px 8px rgba(0,0,0,0.1)',
+                border: isVipEligible ? `2px solid ${avatarColor}` : '2px solid transparent',
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                cursor: 'pointer',
+                animation: isVipEligible ? `vipGlow 3s ease-in-out infinite` : 'none'
+              }}
+              title={isVipEligible ? 'VIP Trading User' : 'Earn VIP Trading'}
+              onClick={() => {
+                if (!isVipEligible) {
+                  setShowVipModal(true)
+                } else {
+                  navigate('/vip-trading')
+                }
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f9fafb'
-                e.currentTarget.style.borderColor = '#9ca3af'
+                if (isVipEligible) {
+                  e.currentTarget.style.transform = 'scale(1.1)'
+                  e.currentTarget.style.animation = 'none'
+                  e.currentTarget.style.boxShadow = `0 0 30px ${avatarColor}CC, 0 0 60px ${avatarColor}80, 0 6px 20px rgba(0,0,0,0.2)`
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white'
-                e.currentTarget.style.borderColor = '#d1d5db'
+                if (isVipEligible) {
+                  e.currentTarget.style.transform = 'scale(1)'
+                  e.currentTarget.style.animation = `vipGlow 3s ease-in-out infinite`
+                  e.currentTarget.style.boxShadow = `0 0 20px ${avatarColor}80, 0 0 40px ${avatarColor}40, 0 4px 12px rgba(0,0,0,0.15)`
+                }
               }}
-              onMouseDown={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-              onMouseUp={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
             >
-              <LogOut size={16} />
-              Logout
-            </button>
+              {avatarLetter}
+            </div>
+            {/* Lock Icon for Non-VIP Users */}
+            {!isVipEligible && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fef3c7',
+                  border: '2px solid white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  cursor: 'pointer',
+                  animation: 'pulseLock 2s ease-in-out infinite'
+                }}
+                title="Earn VIP Trading by reaching $100,000 in exchanges"
+              >
+                <Lock size={10} color="#92400e" />
+              </div>
+            )}
           </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '0.625rem 1.25rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.5rem',
+              backgroundColor: 'white',
+              color: '#374151',
+              fontSize: '0.875rem',
+              fontWeight: '400',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb'
+              e.currentTarget.style.borderColor = '#d1d5db'
+              e.currentTarget.style.color = '#111827'
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white'
+              e.currentTarget.style.borderColor = '#e5e7eb'
+              e.currentTarget.style.color = '#374151'
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb'
+            }}
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </div>
       </header>
 
       <div style={{ 
-        maxWidth: '1280px', 
+        maxWidth: '1120px', 
         margin: '0 auto',
         padding: '2rem 1rem'
       }}>
@@ -695,7 +690,7 @@ const Dashboard = () => {
         }}>
           <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1rem' }}>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Portfolio Balance</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: 400, color: '#111827' }}>
               ${Number(user?.total_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
@@ -704,7 +699,7 @@ const Dashboard = () => {
           </div>
           <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1rem' }}>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Bitcoin (BTC)</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 400, color: '#111827' }}>
               ${cryptoPrices.bitcoin?.price ? cryptoPrices.bitcoin.price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#4b5563' }}>
@@ -713,7 +708,7 @@ const Dashboard = () => {
           </div>
           <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1rem' }}>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Ethereum (ETH)</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 400, color: '#111827' }}>
               ${cryptoPrices.ethereum?.price ? cryptoPrices.ethereum.price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#4b5563' }}>
@@ -725,7 +720,7 @@ const Dashboard = () => {
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ 
             fontSize: '2rem', 
-            fontWeight: 'bold', 
+            fontWeight: '400', 
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
@@ -753,11 +748,11 @@ const Dashboard = () => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#000000'
+            background: 'linear-gradient(135deg, #00CDCB 0%, #008B8A 100%)'
           }}>
             <h2 style={{ 
               fontSize: '1.5rem', 
-              fontWeight: '700',
+              fontWeight: '400',
               color: 'white',
               margin: 0
             }}>
@@ -774,7 +769,7 @@ const Dashboard = () => {
                 color: 'white',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 fontSize: '0.875rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
@@ -850,7 +845,7 @@ const Dashboard = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#000000',
+                      color: '#00CDCB',
                       flexShrink: 0
                     }}>
                       {crypto.icon}
@@ -858,7 +853,7 @@ const Dashboard = () => {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ 
                         fontSize: '1.125rem',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         color: '#111827',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -883,7 +878,7 @@ const Dashboard = () => {
                   }}>
                     <div style={{ 
                       fontSize: '1.25rem',
-                      fontWeight: '700',
+                      fontWeight: '400',
                       color: '#111827'
                     }}>
                       $<SmoothNumber value={currentPrice} duration={800} decimals={crypto.decimals} />
@@ -904,7 +899,7 @@ const Dashboard = () => {
                   }}>
                     <div style={{ 
                       fontSize: '1.125rem',
-                      fontWeight: '600',
+                      fontWeight: '400',
                       color: '#10b981'
                     }}>
                       $<SmoothNumber value={receivingPrice} duration={800} decimals={crypto.decimals} />
@@ -935,7 +930,7 @@ const Dashboard = () => {
                       </div>
                       <div style={{ 
                         fontSize: '0.875rem',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         color: '#4b5563'
                       }}>
                         <SmoothNumber value={data?.change_1h} duration={600} decimals={2} showSign={true} />%
@@ -951,7 +946,7 @@ const Dashboard = () => {
                       </div>
                       <div style={{ 
                         fontSize: '0.875rem',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         color: '#4b5563'
                       }}>
                         <SmoothNumber value={data?.change_24h} duration={600} decimals={2} showSign={true} />%
@@ -967,7 +962,7 @@ const Dashboard = () => {
                       </div>
                       <div style={{ 
                         fontSize: '0.875rem',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         color: '#4b5563'
                       }}>
                         <SmoothNumber value={data?.change_7d} duration={600} decimals={2} showSign={true} />%
@@ -1010,8 +1005,8 @@ const Dashboard = () => {
                         src={goldenChestImg} 
                         alt="Golden Chest" 
                         style={{
-                          width: '4rem',
-                          height: '4rem',
+                          width: '6rem',
+                          height: '6rem',
                           objectFit: 'contain'
                         }}
                       />
@@ -1038,7 +1033,7 @@ const Dashboard = () => {
             <div style={{ marginBottom: '1rem' }}>
               <h3 style={{ 
                 fontSize: '1.25rem', 
-                fontWeight: '600',
+                fontWeight: '400',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
@@ -1251,7 +1246,7 @@ const Dashboard = () => {
                             marginBottom: '0.5rem'
                           }}>
                             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#111827' }}>
                               ${currentPrice.toLocaleString(undefined, { 
                                 maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
                               })}
@@ -1266,7 +1261,7 @@ const Dashboard = () => {
                             borderTop: '1px solid #e5e7eb'
                           }}>
                             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#10b981' }}>
                               ${receivingPrice.toLocaleString(undefined, { 
                                 maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
                               })}
@@ -1280,7 +1275,7 @@ const Dashboard = () => {
                             borderTop: '1px solid #e5e7eb'
                           }}>
                             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Value:</span>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#10b981' }}>
                               ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </span>
                           </div>
@@ -1375,7 +1370,7 @@ const Dashboard = () => {
                       )}
                       {exchangeForm.paymentAccount === 'apple_pay' && (
                         <>
-                          <FaApplePay size={18} color="#000000" />
+                          <FaApplePay size={18} color="#00CDCB" />
                           <span>Apple Pay</span>
                         </>
                       )}
@@ -1982,26 +1977,27 @@ const Dashboard = () => {
                 style={{
                   width: '100%',
                   height: '2.75rem',
-                  backgroundColor: (loading || !isFormValid()) ? '#9ca3af' : '#000000',
+                  backgroundColor: (loading || !isFormValid()) ? '#9ca3af' : '#00CDCB',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   fontWeight: '500',
                   cursor: (loading || !isFormValid()) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  boxShadow: (loading || !isFormValid()) ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
                 onMouseLeave={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#000000'
+                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00CDCB'
                 }}
                 onMouseDown={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#333333'
+                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00A3A1'
                 }}
                 onMouseUp={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
               >
                 {loading ? 'Processing...' : 'Exchange Now'}
@@ -2136,7 +2132,7 @@ const Dashboard = () => {
 
               <h2 style={{
                 fontSize: '2.5rem',
-                fontWeight: '800',
+                fontWeight: '400',
                 background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -2183,7 +2179,7 @@ const Dashboard = () => {
                   border: 'none',
                   borderRadius: '0.75rem',
                   fontSize: '1rem',
-                  fontWeight: '700',
+                  fontWeight: '400',
                   cursor: 'pointer',
                   transition: 'all 0.3s',
                   boxShadow: '0 10px 25px -5px rgba(251, 191, 36, 0.5)',
@@ -2322,18 +2318,25 @@ const Dashboard = () => {
                 gap: '0.75rem'
               }}>
                 <div style={{
-                  padding: '0.75rem',
-                  borderRadius: '50%',
-                  backgroundColor: '#fef3c7',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent'
                 }}>
-                  <Star size={24} fill="#fbbf24" color="#fbbf24" />
+                  <img 
+                    src={vipImg} 
+                    alt="VIP" 
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      objectFit: 'contain',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
                 </div>
                 <h2 style={{
                   fontSize: '1.5rem',
-                  fontWeight: '700',
+                  fontWeight: '400',
                   color: '#111827',
                   margin: 0
                 }}>
@@ -2384,7 +2387,7 @@ const Dashboard = () => {
                 <p style={{
                   fontSize: '1rem',
                   color: '#92400e',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   margin: 0
                 }}>
                   Feature Locked
@@ -2396,7 +2399,7 @@ const Dashboard = () => {
                 lineHeight: '1.6',
                 margin: 0
               }}>
-                To unlock VIP Trading, you need to maintain a minimum Portfolio Balance of <strong style={{ color: '#111827' }}>$10,000</strong> in your account.
+                To unlock VIP Trading, you need to maintain a minimum Portfolio Balance of <strong style={{ color: '#111827' }}>$100,000</strong> in your account.
               </p>
               <p style={{
                 fontSize: '0.875rem',
@@ -2423,7 +2426,7 @@ const Dashboard = () => {
                   backgroundColor: 'white',
                   color: '#374151',
                   fontSize: '0.875rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
@@ -2500,7 +2503,7 @@ const Dashboard = () => {
                 <div>
                   <h3 style={{
                     fontSize: '1.5rem',
-                    fontWeight: '700',
+                    fontWeight: '400',
                     color: '#111827',
                     margin: 0
                   }}>
@@ -2511,7 +2514,7 @@ const Dashboard = () => {
                     color: '#6b7280',
                     margin: 0
                   }}>
-                    Confirm your exchange for $10,000
+                    Confirm your exchange for $100,000
                   </p>
                 </div>
               </div>
@@ -2557,12 +2560,12 @@ const Dashboard = () => {
                 marginBottom: '1rem'
               }}>
                 <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Exchange Amount:</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827' }}>$10,000.00</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: '400', color: '#111827' }}>$100,000.00</span>
               </div>
               
               {(() => {
                 const currentPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
-                const coinCount = currentPrice > 0 ? (10000 / currentPrice) : 0
+                const coinCount = currentPrice > 0 ? (100000 / currentPrice) : 0
                 const receivingPrice = currentPrice * 1.24
                 const receivingValue = coinCount * receivingPrice
                 
@@ -2577,7 +2580,7 @@ const Dashboard = () => {
                       borderTop: '1px solid #e5e7eb'
                     }}>
                       <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
                         ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
                       </span>
                     </div>
@@ -2589,7 +2592,7 @@ const Dashboard = () => {
                       marginBottom: '1rem'
                     }}>
                       <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Coin Count:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
                         {coinCount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedCryptoForExchange.symbol}
                       </span>
                     </div>
@@ -2603,7 +2606,7 @@ const Dashboard = () => {
                       borderTop: '1px solid #e5e7eb'
                     }}>
                       <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#10b981' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#10b981' }}>
                         ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
                       </span>
                     </div>
@@ -2619,8 +2622,8 @@ const Dashboard = () => {
                       padding: '1.5rem',
                       borderRadius: '0 0 0.75rem 0.75rem'
                     }}>
-                      <span style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>Total Receiving Value:</span>
-                      <span style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>Total Receiving Value:</span>
+                      <span style={{ fontSize: '1.5rem', fontWeight: '400', color: '#10b981' }}>
                         ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -2647,7 +2650,7 @@ const Dashboard = () => {
                 margin: 0,
                 lineHeight: '1.5'
               }}>
-                Are you sure you want to exchange {selectedCryptoForExchange.name} for $10,000? This action cannot be undone.
+                Are you sure you want to exchange {selectedCryptoForExchange.name} for $100,000? This action cannot be undone.
               </p>
             </div>
 
@@ -2666,7 +2669,7 @@ const Dashboard = () => {
                   backgroundColor: 'white',
                   color: '#374151',
                   fontSize: '0.875rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
@@ -2697,7 +2700,7 @@ const Dashboard = () => {
                     const exchangeData = {
                       user_id: user.id,
                       category: cryptoSymbolMap[selectedCryptoForExchange.id] || selectedCryptoForExchange.id,
-                      amount: 10000
+                      amount: 100000
                     }
                     
                     const result = await cryptoAPI.exchangeCrypto(exchangeData)
@@ -2725,7 +2728,7 @@ const Dashboard = () => {
                   backgroundColor: loading ? '#9ca3af' : '#10b981',
                   color: 'white',
                   fontSize: '0.875rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s'
                 }}

@@ -94,7 +94,7 @@ const SignUp = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h2 style={{ 
             fontSize: '2rem', 
-            fontWeight: 'bold', 
+            fontWeight: '400', 
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
@@ -285,7 +285,7 @@ const SignUp = () => {
                     color: '#6b7280'
                   }}
                 >
-                  {showConfirmPassword ? '👁️‍🗨️' : '👁️'}
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -293,9 +293,9 @@ const SignUp = () => {
             <label style={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
               <input type="checkbox" required style={{ marginRight: '0.5rem' }} />
               I agree to the{' '}
-              <a href="#" style={{ color: '#000000', textDecoration: 'none' }}>Terms of Service</a>
+              <a href="#" style={{ color: '#00CDCB', textDecoration: 'none' }}>Terms of Service</a>
               {' '}and{' '}
-              <a href="#" style={{ color: '#000000', textDecoration: 'none' }}>Privacy Policy</a>
+              <a href="#" style={{ color: '#00CDCB', textDecoration: 'none' }}>Privacy Policy</a>
             </label>
 
             <button
@@ -304,20 +304,21 @@ const SignUp = () => {
               style={{
                 width: '100%',
                 height: '2.75rem',
-                backgroundColor: loading ? '#9ca3af' : '#000000',
+                backgroundColor: loading ? '#9ca3af' : '#00CDCB',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
                 fontWeight: '500',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                boxShadow: loading ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
               }}
               onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                if (!loading) e.currentTarget.style.backgroundColor = '#00B8B6'
               }}
               onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#000000'
+                if (!loading) e.currentTarget.style.backgroundColor = '#00CDCB'
               }}
               onMouseDown={(e) => {
                 if (!loading) e.currentTarget.style.backgroundColor = '#333333'
@@ -346,7 +347,7 @@ const SignUp = () => {
               </Link>
               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                 Already have an account?{' '}
-                <Link to="/signin" style={{ color: '#000000', textDecoration: 'none', fontWeight: '500' }}>
+                <Link to="/signin" style={{ color: '#00CDCB', textDecoration: 'none', fontWeight: '500' }}>
                   Sign in
                 </Link>
               </span>

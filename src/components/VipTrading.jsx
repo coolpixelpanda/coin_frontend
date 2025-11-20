@@ -57,8 +57,8 @@ const VipTrading = () => {
             <Star size={24} fill="#fbbf24" color="#fbbf24" />
             <h1 style={{
               fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: '#000000',
+              fontWeight: '400',
+              color: '#00CDCB',
               margin: 0
             }}>
               VIP Trading
@@ -89,7 +89,7 @@ const VipTrading = () => {
           
           <h2 style={{
             fontSize: '2.5rem',
-            fontWeight: '700',
+            fontWeight: '400',
             color: '#111827',
             marginBottom: '1rem'
           }}>
@@ -122,7 +122,7 @@ const VipTrading = () => {
               <Zap size={40} color="#fbbf24" style={{ marginBottom: '1rem' }} />
               <h3 style={{
                 fontSize: '1.25rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 marginBottom: '0.5rem'
               }}>
@@ -146,7 +146,7 @@ const VipTrading = () => {
               <Shield size={40} color="#fbbf24" style={{ marginBottom: '1rem' }} />
               <h3 style={{
                 fontSize: '1.25rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 marginBottom: '0.5rem'
               }}>
@@ -170,7 +170,7 @@ const VipTrading = () => {
               <TrendingUp size={40} color="#fbbf24" style={{ marginBottom: '1rem' }} />
               <h3 style={{
                 fontSize: '1.25rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 marginBottom: '0.5rem'
               }}>

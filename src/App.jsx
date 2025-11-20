@@ -11,6 +11,9 @@ import VipTrading from './components/VipTrading'
 import ProtectedRoute from './components/ProtectedRoute'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import UserAgreements from './components/UserAgreements'
+import TermsOfService from './components/TermsOfService'
+import Support from './components/Support'
+import Contact from './components/Contact'
 
 function App() {
   return (
@@ -23,6 +26,9 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/user-agreements" element={<UserAgreements />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/support" element={<Support />} />
+        <Route path="/contact" element={<Contact />} />
         <Route 
           path="/dashboard" 
           element={

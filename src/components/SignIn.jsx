@@ -175,7 +175,7 @@ const SignIn = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h2 style={{ 
             fontSize: '2rem', 
-            fontWeight: 'bold', 
+            fontWeight: '400', 
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
@@ -253,7 +253,7 @@ const SignIn = () => {
                   style={{
                     width: '100%',
                     height: '2.75rem',
-                    backgroundColor: loading ? '#9ca3af' : '#000000',
+                    backgroundColor: loading ? '#9ca3af' : '#00CDCB',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.5rem',
@@ -264,13 +264,14 @@ const SignIn = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    boxShadow: loading ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                    if (!loading) e.currentTarget.style.backgroundColor = '#00B8B6'
                   }}
                   onMouseLeave={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#000000'
+                    if (!loading) e.currentTarget.style.backgroundColor = '#00CDCB'
                   }}
                 >
                   <Key size={18} />
@@ -389,7 +390,7 @@ const SignIn = () => {
                 <input type="checkbox" style={{ marginRight: '0.5rem' }} />
                 Remember me
               </label>
-              <a href="#" style={{ fontSize: '0.875rem', color: '#000000', textDecoration: 'none' }}>
+              <a href="#" style={{ fontSize: '0.875rem', color: '#00CDCB', textDecoration: 'none' }}>
                 Forgot password?
               </a>
             </div>
@@ -402,26 +403,27 @@ const SignIn = () => {
                 style={{
                   width: '100%',
                   height: '2.75rem',
-                  backgroundColor: loading ? '#9ca3af' : '#000000',
+                  backgroundColor: loading ? '#9ca3af' : '#00CDCB',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   fontWeight: '500',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  boxShadow: loading ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
                 onMouseLeave={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#000000'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#00CDCB'
                 }}
                 onMouseDown={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#333333'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#00A3A1'
                 }}
                 onMouseUp={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#1a1a1a'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
               >
                 {loading ? 'Signing in...' : 'Sign in'}
@@ -432,7 +434,7 @@ const SignIn = () => {
             <div style={{ textAlign: 'center' }}>
               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                 Don't have an account?{' '}
-                <Link to="/signup" style={{ color: '#000000', textDecoration: 'none', fontWeight: '500' }}>
+                <Link to="/signup" style={{ color: '#00CDCB', textDecoration: 'none', fontWeight: '500' }}>
                   Sign up
                 </Link>
               </span>
@@ -451,7 +453,7 @@ const SignIn = () => {
               <Link 
                 to="/privacy-policy" 
                 target="_blank"
-                style={{ color: '#000000', textDecoration: 'underline' }}
+                style={{ color: '#00CDCB', textDecoration: 'underline' }}
               >
                 Privacy Policy
               </Link>

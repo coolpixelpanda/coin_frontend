@@ -232,7 +232,7 @@ const ExchangeSuccess = () => {
       }}>
         {/* Header */}
         <div style={{
-          background: '#000000',
+          background: 'linear-gradient(135deg, #00CDCB 0%, #008B8A 100%)',
           padding: '2rem',
           textAlign: 'center',
           color: 'white'
@@ -245,7 +245,7 @@ const ExchangeSuccess = () => {
           </div>
           <h1 style={{
             fontSize: '2rem',
-            fontWeight: '700',
+            fontWeight: '400',
             margin: 0,
             marginBottom: '0.5rem'
           }}>
@@ -271,7 +271,7 @@ const ExchangeSuccess = () => {
           }}>
             <h2 style={{
               fontSize: '1.25rem',
-              fontWeight: '600',
+              fontWeight: '400',
               color: '#111827',
               marginBottom: '1rem'
             }}>
@@ -292,7 +292,7 @@ const ExchangeSuccess = () => {
                 </div>
                 <div style={{
                   fontSize: '1.125rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   color: '#111827'
                 }}>
                   {exchangeData.category}
@@ -308,7 +308,7 @@ const ExchangeSuccess = () => {
                 </div>
                 <div style={{
                   fontSize: '1.125rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   color: '#111827'
                 }}>
                   ${exchangeData.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -324,7 +324,7 @@ const ExchangeSuccess = () => {
                 </div>
                 <div style={{
                   fontSize: '1.125rem',
-                  fontWeight: '600',
+                  fontWeight: '400',
                   color: '#111827'
                 }}>
                   {exchangeData.user_id}
@@ -342,7 +342,7 @@ const ExchangeSuccess = () => {
                     </div>
                     <div style={{
                       fontSize: '1.125rem',
-                      fontWeight: '600',
+                      fontWeight: '400',
                       color: '#111827'
                     }}>
                       ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -358,7 +358,7 @@ const ExchangeSuccess = () => {
                     </div>
                     <div style={{
                       fontSize: '1.125rem',
-                      fontWeight: '600',
+                      fontWeight: '400',
                       color: '#10b981'
                     }}>
                       ${(currentPrice * 1.24).toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -383,10 +383,10 @@ const ExchangeSuccess = () => {
               gap: '0.5rem',
               marginBottom: '1rem'
             }}>
-              <AlertTriangle size={24} color="#000000" />
+              <AlertTriangle size={24} color="#00CDCB" />
               <h3 style={{
                 fontSize: '1.125rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 margin: 0
               }}>
@@ -416,7 +416,7 @@ const ExchangeSuccess = () => {
             }}>
               <h3 style={{
                 fontSize: '1.125rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 marginBottom: '1rem'
               }}>
@@ -436,7 +436,7 @@ const ExchangeSuccess = () => {
                   size={200}
                   level="M"
                   includeMargin={true}
-                  fgColor="#000000"
+                  fgColor="#00CDCB"
                   bgColor="#ffffff"
                 />
               </div>
@@ -453,7 +453,7 @@ const ExchangeSuccess = () => {
             <div>
               <h3 style={{
                 fontSize: '1.125rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 color: '#111827',
                 marginBottom: '1rem'
               }}>
@@ -477,22 +477,22 @@ const ExchangeSuccess = () => {
                 style={{
                   width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#000000',
+                backgroundColor: '#00CDCB',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#000000'}
-                onMouseDown={(e) => e.currentTarget.style.backgroundColor = '#333333'}
-                onMouseUp={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#00B8B6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00CDCB'}
+                onMouseDown={(e) => e.currentTarget.style.backgroundColor = '#00A3A1'}
+                onMouseUp={(e) => e.currentTarget.style.backgroundColor = '#00B8B6'}
               >
                 <Copy size={16} style={{ marginRight: '0.5rem' }} />
                 Copy Address
@@ -511,7 +511,7 @@ const ExchangeSuccess = () => {
           }}>
             <div style={{
               fontSize: '1.125rem',
-              fontWeight: '600',
+              fontWeight: '400',
               color: '#111827',
               marginBottom: '0.5rem'
             }}>
@@ -520,7 +520,7 @@ const ExchangeSuccess = () => {
             </div>
             <div style={{
               fontSize: '2rem',
-              fontWeight: '700',
+              fontWeight: '400',
               color: '#111827',
               fontFamily: 'monospace'
             }}>
@@ -551,7 +551,7 @@ const ExchangeSuccess = () => {
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 display: 'flex',
@@ -570,12 +570,12 @@ const ExchangeSuccess = () => {
               onClick={() => window.location.reload()}
               style={{
                 padding: '0.75rem 2rem',
-                backgroundColor: '#000000',
+                backgroundColor: '#00CDCB',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                fontWeight: '600',
+                fontWeight: '400',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s ease',
                 display: 'flex',

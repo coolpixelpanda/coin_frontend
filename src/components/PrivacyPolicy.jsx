@@ -18,7 +18,7 @@ const PrivacyPolicy = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            color: '#000000',
+            color: '#00CDCB',
             textDecoration: 'none',
             marginBottom: '2rem',
             fontSize: '0.875rem',
@@ -31,7 +31,7 @@ const PrivacyPolicy = () => {
 
         <h1 style={{
           fontSize: '2.5rem',
-          fontWeight: 'bold',
+          fontWeight: '400',
           marginBottom: '0.5rem',
           color: '#111827'
         }}>
@@ -55,7 +55,7 @@ const PrivacyPolicy = () => {
             If you reside outside of the UK and the European Economic Area (the "EEA"), accessing and using our Services means that you accept this Privacy Policy and its terms.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             Key Highlights
           </h2>
 
@@ -74,7 +74,7 @@ const PrivacyPolicy = () => {
             </li>
           </ul>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             1. WHAT INFORMATION WE COLLECT
           </h2>
 
@@ -82,7 +82,7 @@ const PrivacyPolicy = () => {
             We collect the following personal information and documentation:
           </p>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Information You Provide to Us
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -93,7 +93,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Communication preferences and customer support interactions</li>
           </ul>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Information Collected Automatically
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -103,7 +103,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Cookies and similar tracking technologies</li>
           </ul>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Information we obtain from Affiliates and third parties
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -113,7 +113,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Marketing and analytics partners</li>
           </ul>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             2. HOW WE USE YOUR INFORMATION
           </h2>
 
@@ -121,7 +121,7 @@ const PrivacyPolicy = () => {
             We use your personal information to deliver, personalize, operate, improve, create, and develop our Services, to provide you with a secure, smooth, efficient and customized experience as you use them, and for legal compliance, loss prevention, and anti-fraud purposes.
           </p>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Data use necessary to perform our contract with you
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -131,7 +131,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Send transaction confirmations and account notifications</li>
           </ul>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Data use to comply with our legal obligations
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -141,7 +141,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Prevent fraud and financial crimes</li>
           </ul>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Data use for our Legitimate Interests
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -151,7 +151,7 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Marketing and promotional communications (with your consent where required)</li>
           </ul>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             3. HOW AND WHY WE SHARE YOUR INFORMATION
           </h2>
 
@@ -159,14 +159,14 @@ const PrivacyPolicy = () => {
             We work with service providers, partners and other third parties to help us provide our Services, and as a result we need to share certain information with these third parties.
           </p>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Affiliates
           </h3>
           <p style={{ marginBottom: '1rem' }}>
             We may share your information with our affiliated companies to provide integrated services and improve your experience across our platform.
           </p>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Third-Party Service Providers
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
@@ -177,14 +177,14 @@ const PrivacyPolicy = () => {
             <li style={{ marginBottom: '0.5rem' }}>Analytics and marketing service providers</li>
           </ul>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Professional advisors, industry partners, authorities and regulators
           </h3>
           <p style={{ marginBottom: '1rem' }}>
             We may share information with legal advisors, auditors, regulatory authorities, and law enforcement agencies as required by law or to protect our rights and interests.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             4. HOW LONG WE RETAIN YOUR PERSONAL INFORMATION
           </h2>
 
@@ -192,7 +192,7 @@ const PrivacyPolicy = () => {
             We retain your information as needed to provide our Services, comply with legal obligations, or protect our or others' interests. While retention requirements vary by country, we maintain internal retention policies on the basis of how information needs to be used. This includes considerations such as when the information was collected or created, whether it is necessary in order to continue offering you our Services, whether we are required to hold the information to comply with our legal obligations, including AML/KYC compliance or other financial regulatory obligations.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             5. CHILDREN'S PERSONAL INFORMATION
           </h2>
 
@@ -200,7 +200,7 @@ const PrivacyPolicy = () => {
             The Sites and Services are not directed to persons under the age of 18, and we do not knowingly request or collect any information about persons under the age of 18. If you are under the age of 18, please do not provide any personal information through the Sites or Services.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             6. INTERNATIONAL TRANSFERS
           </h2>
 
@@ -208,7 +208,7 @@ const PrivacyPolicy = () => {
             To facilitate our global operations, CEX-USA, its Affiliates, third-party partners, and service providers may transfer, store, and process your personal information throughout the world, including the United States, Ireland, and other jurisdictions where we operate.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             7. YOUR PRIVACY RIGHTS AND CHOICES
           </h2>
 
@@ -216,7 +216,7 @@ const PrivacyPolicy = () => {
             Depending on where you live, you may be able to exercise certain privacy rights related to your personal information. You can request access to, correction of, or deletion of your personal information by contacting us at privacy@cex-usa.com or through your account settings.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             8. HOW TO CONTACT US WITH QUESTIONS
           </h2>
 
@@ -224,7 +224,7 @@ const PrivacyPolicy = () => {
             If you have questions or concerns regarding this Privacy Policy, or if you have a complaint, please contact us at privacy@cex-usa.com or through our Support Portal.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             9. CHANGES TO THIS PRIVACY POLICY
           </h2>
 
@@ -232,7 +232,7 @@ const PrivacyPolicy = () => {
             We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
           </p>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
             10. OUR RELATIONSHIP WITH YOU
           </h2>
 
