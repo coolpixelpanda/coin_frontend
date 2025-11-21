@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-// const API_BASE_URL = 'https://coin-backend-fawn.vercel.app/api' // Adjust this to your backend URL
-const API_BASE_URL = 'http://localhost:3006/api' // Adjust this to your backend URL
+const API_BASE_URL = 'https://coin-backend-fawn.vercel.app/api' // Adjust this to your backend URL
+// const API_BASE_URL = 'http://localhost:3006/api' // Adjust this to your backend URL
 
 const api = axios.create({
   baseURL: API_BASE_URL,
