@@ -391,10 +391,17 @@ const Dashboard = () => {
       return
     }
     
-    // Check minimum amount
+    // Check minimum calculated USD value (amount * current price)
     const amount = parseFloat(exchangeForm.amount)
-    if (isNaN(amount) || amount < 10000) {
-      setError('Minimum exchange amount is $10,000.')
+    if (isNaN(amount) || amount <= 0) {
+      setError('Please enter a valid amount.')
+      return
+    }
+    
+    const currentPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
+    const calculatedValue = amount * currentPrice
+    if (calculatedValue < 10000) {
+      setError(`Minimum exchange value is $10,000. Current value: $${calculatedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
       return
     }
     
@@ -418,7 +425,7 @@ const Dashboard = () => {
       const exchangeData = {
         user_id: user.id,
         category: cryptoSymbolMap[exchangeForm.fromCrypto] || exchangeForm.fromCrypto,
-        amount: amount
+        amount: calculatedValue // Send calculated USD value to API
       }
       
       const result = await cryptoAPI.exchangeCrypto(exchangeData)
@@ -466,9 +473,13 @@ const Dashboard = () => {
   const isFormValid = () => {
     if (!exchangeForm.amount || !exchangeForm.paymentAccount) return false
     
-    // Check minimum amount
+    // Check minimum calculated USD value (amount * current price)
     const amount = parseFloat(exchangeForm.amount)
-    if (isNaN(amount) || amount < 10000) return false
+    if (isNaN(amount) || amount <= 0) return false
+    
+    const currentPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
+    const calculatedValue = amount * currentPrice
+    if (calculatedValue < 10000) return false
     
     // Check if exchange is already in progress
     if (isExchanging) return false
@@ -1246,7 +1257,7 @@ const Dashboard = () => {
                 <input
                   type="number"
                   step="0.00001"
-                  min="10000"
+                  min="0"
                   value={exchangeForm.amount}
                   onChange={(e) => setExchangeForm({...exchangeForm, amount: e.target.value})}
                   style={{
@@ -1258,18 +1269,26 @@ const Dashboard = () => {
                     fontSize: '0.875rem',
                     boxSizing: 'border-box'
                   }}
-                  placeholder="Minimum $10,000"
+                  placeholder="Enter amount"
                   required
                 />
-                {exchangeForm.amount && parseFloat(exchangeForm.amount) < 10000 && (
-                  <p style={{ 
-                    marginTop: '0.5rem', 
-                    fontSize: '0.75rem', 
-                    color: '#ef4444' 
-                  }}>
-                    Minimum exchange amount is $10,000
-                  </p>
-                )}
+                {exchangeForm.amount && parseFloat(exchangeForm.amount) > 0 && cryptoPrices[exchangeForm.fromCrypto] && (() => {
+                  const amount = parseFloat(exchangeForm.amount)
+                  const currentPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
+                  const calculatedValue = amount * currentPrice
+                  if (calculatedValue < 10000) {
+                    return (
+                      <p style={{ 
+                        marginTop: '0.5rem', 
+                        fontSize: '0.75rem', 
+                        color: '#ef4444' 
+                      }}>
+                        Minimum exchange value is $10,000. Current value: ${calculatedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    )
+                  }
+                  return null
+                })()}
                 {exchangeForm.amount && parseFloat(exchangeForm.amount) > 0 && cryptoPrices[exchangeForm.fromCrypto] && (
                   <div style={{
                     marginTop: '0.75rem',
