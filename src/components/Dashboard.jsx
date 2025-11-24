@@ -163,6 +163,7 @@ const Dashboard = () => {
   const [priceHistory, setPriceHistory] = useState({})
   const [showExchangeModal, setShowExchangeModal] = useState(false)
   const [selectedCryptoForExchange, setSelectedCryptoForExchange] = useState(null)
+  const [isExchanging, setIsExchanging] = useState(false)
   const paymentDropdownRef = useRef(null)
   const cryptoDropdownRef = useRef(null)
   
@@ -214,6 +215,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadCryptoPrices(true) // Show loading indicator on initial load
+    
+    // Check if there's an ongoing exchange in sessionStorage
+    const ongoingExchange = sessionStorage.getItem('ongoingExchange')
+    if (ongoingExchange === 'true') {
+      setIsExchanging(true)
+    }
     
     // Poll crypto prices every 30 seconds
     const interval = setInterval(() => {
@@ -377,9 +384,25 @@ const Dashboard = () => {
 
   const handleExchange = async (e) => {
     e.preventDefault()
+    
+    // Check if exchange is already in progress
+    if (isExchanging) {
+      setError('An exchange is already in progress. Please wait for it to complete.')
+      return
+    }
+    
+    // Check minimum amount
+    const amount = parseFloat(exchangeForm.amount)
+    if (isNaN(amount) || amount < 10000) {
+      setError('Minimum exchange amount is $10,000.')
+      return
+    }
+    
     setLoading(true)
     setError('')
     setSuccess('')
+    setIsExchanging(true)
+    sessionStorage.setItem('ongoingExchange', 'true')
 
     // Map crypto IDs to symbols for API
     const cryptoSymbolMap = {
@@ -395,7 +418,7 @@ const Dashboard = () => {
       const exchangeData = {
         user_id: user.id,
         category: cryptoSymbolMap[exchangeForm.fromCrypto] || exchangeForm.fromCrypto,
-        amount: parseFloat(exchangeForm.amount)
+        amount: amount
       }
       
       const result = await cryptoAPI.exchangeCrypto(exchangeData)
@@ -433,6 +456,8 @@ const Dashboard = () => {
       })
     } catch (error) {
       setError(error.message || 'Exchange failed. Please try again.')
+      setIsExchanging(false)
+      sessionStorage.removeItem('ongoingExchange')
     }
     setLoading(false)
   }
@@ -440,6 +465,13 @@ const Dashboard = () => {
 
   const isFormValid = () => {
     if (!exchangeForm.amount || !exchangeForm.paymentAccount) return false
+    
+    // Check minimum amount
+    const amount = parseFloat(exchangeForm.amount)
+    if (isNaN(amount) || amount < 10000) return false
+    
+    // Check if exchange is already in progress
+    if (isExchanging) return false
     
     // Check required fields based on payment account type
     switch(exchangeForm.paymentAccount) {
@@ -981,9 +1013,14 @@ const Dashboard = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        if (isExchanging) {
+                          setError('An exchange is already in progress. Please wait for it to complete.')
+                          return
+                        }
                         setSelectedCryptoForExchange(crypto)
                         setShowExchangeModal(true)
                       }}
+                      disabled={isExchanging}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -991,11 +1028,12 @@ const Dashboard = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s'
+                        cursor: isExchanging ? 'not-allowed' : 'pointer',
+                        transition: 'transform 0.2s',
+                        opacity: isExchanging ? 0.5 : 1
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.1)'
+                        if (!isExchanging) e.currentTarget.style.transform = 'scale(1.1)'
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'scale(1)'
@@ -1208,7 +1246,7 @@ const Dashboard = () => {
                 <input
                   type="number"
                   step="0.00001"
-                  min="0"
+                  min="10000"
                   value={exchangeForm.amount}
                   onChange={(e) => setExchangeForm({...exchangeForm, amount: e.target.value})}
                   style={{
@@ -1220,9 +1258,18 @@ const Dashboard = () => {
                     fontSize: '0.875rem',
                     boxSizing: 'border-box'
                   }}
-                  placeholder="Enter amount to exchange"
+                  placeholder="Minimum $10,000"
                   required
                 />
+                {exchangeForm.amount && parseFloat(exchangeForm.amount) < 10000 && (
+                  <p style={{ 
+                    marginTop: '0.5rem', 
+                    fontSize: '0.75rem', 
+                    color: '#ef4444' 
+                  }}>
+                    Minimum exchange amount is $10,000
+                  </p>
+                )}
                 {exchangeForm.amount && parseFloat(exchangeForm.amount) > 0 && cryptoPrices[exchangeForm.fromCrypto] && (
                   <div style={{
                     marginTop: '0.75rem',
@@ -1971,36 +2018,49 @@ const Dashboard = () => {
                 </div>
               )}
 
+              {isExchanging && (
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #fbbf24',
+                  borderRadius: '0.375rem',
+                  color: '#92400e',
+                  fontSize: '0.875rem'
+                }}>
+                  An exchange is currently in progress. Please wait for it to complete before starting a new exchange.
+                </div>
+              )}
               <button
                 type="submit"
-                disabled={loading || !isFormValid()}
+                disabled={loading || !isFormValid() || isExchanging}
                 style={{
                   width: '100%',
                   height: '2.75rem',
-                  backgroundColor: (loading || !isFormValid()) ? '#9ca3af' : '#00CDCB',
+                  backgroundColor: (loading || !isFormValid() || isExchanging) ? '#9ca3af' : '#00CDCB',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '1rem',
                   fontWeight: '500',
-                  cursor: (loading || !isFormValid()) ? 'not-allowed' : 'pointer',
+                  cursor: (loading || !isFormValid() || isExchanging) ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
-                  boxShadow: (loading || !isFormValid()) ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
+                  boxShadow: (loading || !isFormValid() || isExchanging) ? 'none' : '0 4px 14px rgba(0, 205, 203, 0.3)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00B8B6'
+                  if (!loading && isFormValid() && !isExchanging) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
                 onMouseLeave={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00CDCB'
+                  if (!loading && isFormValid() && !isExchanging) e.currentTarget.style.backgroundColor = '#00CDCB'
                 }}
                 onMouseDown={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00A3A1'
+                  if (!loading && isFormValid() && !isExchanging) e.currentTarget.style.backgroundColor = '#00A3A1'
                 }}
                 onMouseUp={(e) => {
-                  if (!loading && isFormValid()) e.currentTarget.style.backgroundColor = '#00B8B6'
+                  if (!loading && isFormValid() && !isExchanging) e.currentTarget.style.backgroundColor = '#00B8B6'
                 }}
               >
-                {loading ? 'Processing...' : 'Exchange Now'}
+                {loading ? 'Processing...' : isExchanging ? 'Exchange In Progress...' : 'Exchange Now'}
               </button>
             </form>
           </div>
@@ -2686,8 +2746,17 @@ const Dashboard = () => {
               </button>
               <button
                 onClick={async () => {
+                  // Check if exchange is already in progress
+                  if (isExchanging) {
+                    setError('An exchange is already in progress. Please wait for it to complete.')
+                    return
+                  }
+                  
                   try {
                     setLoading(true)
+                    setIsExchanging(true)
+                    sessionStorage.setItem('ongoingExchange', 'true')
+                    
                     const cryptoSymbolMap = {
                       'bitcoin': 'BTC',
                       'ethereum': 'ETH',
@@ -2717,10 +2786,12 @@ const Dashboard = () => {
                     })
                   } catch (error) {
                     setError(error.message || 'Exchange failed. Please try again.')
+                    setIsExchanging(false)
+                    sessionStorage.removeItem('ongoingExchange')
                     setLoading(false)
                   }
                 }}
-                disabled={loading}
+                disabled={loading || isExchanging}
                 style={{
                   padding: '0.75rem 1.5rem',
                   border: 'none',

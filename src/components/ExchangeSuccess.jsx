@@ -59,6 +59,9 @@ const ExchangeSuccess = () => {
   const [currentPrice, setCurrentPrice] = useState(null)
   
   useEffect(() => {
+    // Clear ongoing exchange flag when component mounts
+    sessionStorage.removeItem('ongoingExchange')
+    
     // Get exchange data from location state
     if (location.state?.exchangeData) {
       setExchangeData(location.state.exchangeData)
@@ -436,7 +439,7 @@ const ExchangeSuccess = () => {
                   size={200}
                   level="M"
                   includeMargin={true}
-                  fgColor="#00CDCB"
+                  fgColor="#000000"
                   bgColor="#ffffff"
                 />
               </div>

@@ -103,13 +103,39 @@ export const AuthProvider = ({ children }) => {
                           error.response?.data?.error || 
                           error.message || ''
       
-      if (errorMessage.toLowerCase().includes('already exist') || 
-          errorMessage.toLowerCase().includes('duplicate') ||
-          error.response?.status === 409) {
-        // User already exists - this is okay, we'll try to login
+      const errorMessageLower = errorMessage.toLowerCase()
+      
+      // Check for duplicate username
+      if (errorMessageLower.includes('username') && 
+          (errorMessageLower.includes('already exist') || 
+           errorMessageLower.includes('duplicate') ||
+           errorMessageLower.includes('taken'))) {
         return { 
           success: false, 
-          error: 'User already exists',
+          error: 'Username already exists. Please choose a different username.',
+          duplicateUsername: true
+        }
+      }
+      
+      // Check for duplicate email
+      if (errorMessageLower.includes('email') && 
+          (errorMessageLower.includes('already exist') || 
+           errorMessageLower.includes('duplicate') ||
+           errorMessageLower.includes('taken'))) {
+        return { 
+          success: false, 
+          error: 'Email already exists. Please use a different email address.',
+          duplicateEmail: true
+        }
+      }
+      
+      // Generic duplicate check
+      if (errorMessageLower.includes('already exist') || 
+          errorMessageLower.includes('duplicate') ||
+          error.response?.status === 409) {
+        return { 
+          success: false, 
+          error: 'Username or email already exists. Please use different credentials.',
           userExists: true
         }
       }
