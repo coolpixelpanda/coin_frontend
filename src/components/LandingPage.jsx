@@ -1638,7 +1638,7 @@ const LandingPage = () => {
                     lineHeight: '1.7',
                     margin: 0
                   }}>
-                    We offer bank-level security with encrypted transactions and secure wallet storage protecting your assets. Founded in 2013, CEX has maintained a clean security record, emphasizing trust and reliability. Your assets are protected with industry-leading security measures—256-bit encryption, multi-factor authentication, and cold storage wallets.
+                    We offer bank-level security with encrypted transactions and secure wallet storage protecting your assets. Founded in 2024, CEX has maintained a clean security record, emphasizing trust and reliability. Your assets are protected with industry-leading security measures—256-bit encryption, multi-factor authentication, and cold storage wallets.
                   </p>
                 </div>
               </div>
@@ -1846,7 +1846,7 @@ const LandingPage = () => {
                 <span style={{
                   fontWeight: '400',
                   color: '#00CDCB'
-                }}>4M+</span>
+                }}>1M+</span>
                 <span>users. Get started today.</span>
               </div>
               <Link
@@ -1959,7 +1959,7 @@ const LandingPage = () => {
                 color: '#00CDCB',
                 lineHeight: '1'
               }}>
-                2013
+                2024
         </div>
       </div>
 
@@ -1979,7 +1979,7 @@ const LandingPage = () => {
                 color: '#00CDCB',
                 lineHeight: '1'
               }}>
-                4M+
+                1M+
             </div>
               </div>
             </div>
@@ -2034,7 +2034,7 @@ const LandingPage = () => {
             color: '#6b7280',
             marginBottom: '2rem'
           }}>
-            Join over 4 million global users who trust CEX for their crypto needs. Welcome to the future of crypto exchange.
+            Join over 1 million global users who trust CEX for their crypto needs. Welcome to the future of crypto exchange.
           </p>
           <Link
             to="/account-type"
