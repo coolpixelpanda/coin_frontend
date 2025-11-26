@@ -6,7 +6,7 @@ const PrivacyPolicy = () => {
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#ffffff',
-      padding: '2rem',
+      padding: 'clamp(1rem, 3vw, 2rem)',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       lineHeight: '1.6',
       color: '#111827'
@@ -86,21 +86,25 @@ const PrivacyPolicy = () => {
             Information You Provide to Us
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>Account registration information (email address, phone number, username)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Identity verification information (government-issued ID, selfie, proof of address)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Financial information (bank account details, payment method information)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Transaction information (cryptocurrency addresses, transaction amounts, exchange history)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Communication preferences and customer support interactions</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Account Registration:</strong> Email address, username, password (hashed and encrypted), and account type (Personal, Business, Institutional, or Developer)</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Identity Verification (KYC):</strong> Government-issued identification documents, selfie verification, proof of address, and other documents required for compliance with anti-money laundering (AML) and know-your-customer (KYC) regulations</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Financial Information:</strong> Bank account details, routing numbers, PayPal account information, Venmo/Cash App/Zelle usernames, Apple Pay/Google Pay identifiers, and other payment method details for receiving USD payouts</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Exchange Transaction Data:</strong> Cryptocurrency wallet addresses, transaction amounts (both cryptocurrency amount and USD value), exchange rates, receiving multipliers, transaction timestamps, exchange status, and complete transaction history</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Authentication Data:</strong> Passkey credentials, authentication preferences, and security settings</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Communication Data:</strong> Customer support tickets, inquiries, feedback, and communication preferences</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>VIP Status Information:</strong> Total exchange volume, VIP status eligibility, and account tier information</li>
           </ul>
 
           <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
             Information Collected Automatically
           </h3>
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>Device information (IP address, browser type, device identifiers)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Usage data (pages visited, features used, time spent on platform)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Location data (derived from IP address or device settings)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Cookies and similar tracking technologies</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Device and Browser Information:</strong> IP address, browser type and version, operating system, device type (mobile, tablet, desktop), device identifiers, screen resolution, and language settings</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Usage Analytics:</strong> Pages visited, features accessed, time spent on platform, click patterns, cryptocurrency prices viewed, exchange attempts, and interaction with charts and modals</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Location Data:</strong> Geographic location derived from IP address or device GPS (if enabled) for compliance and fraud prevention</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Technical Data:</strong> Session information, login timestamps, logout times, API usage, error logs, and performance metrics</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Cookies and Tracking:</strong> Authentication tokens, session cookies, preference cookies, and analytics cookies to enhance your experience and maintain security</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Cryptocurrency Market Data:</strong> Real-time price data, historical price charts, market trends, and percentage changes (1H, 24H, 7D) for display purposes</li>
           </ul>
 
           <h3 style={{ fontSize: '1.25rem', fontWeight: '400', marginTop: '1.5rem', marginBottom: '0.75rem' }}>

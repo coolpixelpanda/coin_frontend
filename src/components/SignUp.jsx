@@ -87,7 +87,7 @@ const SignUp = () => {
       alignItems: 'center', 
       justifyContent: 'center',
       background: '#ffffff',
-      padding: '1rem',
+      padding: 'clamp(0.5rem, 2vw, 1rem)',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <div style={{ maxWidth: '28rem', width: '100%' }}>

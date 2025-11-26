@@ -199,10 +199,9 @@ const ExchangeSuccess = () => {
       
       fetchCurrentPrice()
       
-      // Initialize countdown from sessionStorage or start fresh
+      // Initialize countdown - always use exchange timestamp for accurate timing
       // Use wallet address as key for uniqueness
       const exchangeKey = `exchange_countdown_${address}`
-      const savedStartTime = sessionStorage.getItem(`${exchangeKey}_start`)
       
       // Check if exchange data has a timestamp
       const exchangeTimestamp = exchangeDataToUse.timestamp || Date.now()
@@ -232,34 +231,15 @@ const ExchangeSuccess = () => {
         return
       }
       
-      // Clear any old countdown value to avoid conflicts
+      // Clear any old countdown values to ensure fresh start
       sessionStorage.removeItem(exchangeKey)
+      sessionStorage.removeItem(`${exchangeKey}_start`)
       
-      if (savedStartTime) {
-        // Restore start time from sessionStorage
-        const savedTime = parseInt(savedStartTime)
-        const elapsed = Math.floor((Date.now() - savedTime) / 1000)
-        
-        // If timer expired (more than 30 minutes), start fresh
-        if (elapsed >= 1800) {
-          const now = Date.now()
-          setStartTime(now)
-          sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
-          setCountdown(1800)
-        } else {
-          // Restore timer with remaining time
-          const remaining = Math.max(0, 1800 - elapsed)
-          setStartTime(savedTime)
-          setCountdown(remaining)
-        }
-      } else {
-        // Start fresh timer based on exchange timestamp
-        const startTimeToUse = exchangeTimestamp
-        setStartTime(startTimeToUse)
-        sessionStorage.setItem(`${exchangeKey}_start`, startTimeToUse.toString())
-        const remaining = Math.max(0, 1800 - elapsedSinceExchange)
-        setCountdown(remaining)
-      }
+      // Always start timer based on exchange timestamp (ensures fresh 30 min countdown for new exchanges)
+      setStartTime(exchangeTimestamp)
+      sessionStorage.setItem(`${exchangeKey}_start`, exchangeTimestamp.toString())
+      const remaining = Math.max(0, 1800 - elapsedSinceExchange)
+      setCountdown(remaining)
     } else {
       // Redirect to dashboard if no exchange data
       navigate('/dashboard')
@@ -348,7 +328,7 @@ const ExchangeSuccess = () => {
       minHeight: '100vh',
       backgroundColor: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      padding: '2rem'
+      padding: 'clamp(1rem, 2vw, 2rem)'
     }}>
       <div style={{
         maxWidth: '800px',

@@ -16,7 +16,6 @@ import {
   Filler
 } from 'chart.js'
 import logoImg from '../Images/logo.png'
-import goldenChestImg from '../Images/golden_chest.png'
 import vipImg from '../Images/vip.png'
 import { 
   Bitcoin, 
@@ -185,8 +184,6 @@ const Dashboard = () => {
   const [paymentDropdownDirection, setPaymentDropdownDirection] = useState('down')
   const [cryptoDropdownDirection, setCryptoDropdownDirection] = useState('down')
   const [priceHistory, setPriceHistory] = useState({})
-  const [showExchangeModal, setShowExchangeModal] = useState(false)
-  const [selectedCryptoForExchange, setSelectedCryptoForExchange] = useState(null)
   const [isExchanging, setIsExchanging] = useState(false)
   const [showExchangeInProgressModal, setShowExchangeInProgressModal] = useState(false)
   const [showCryptoDetailsModal, setShowCryptoDetailsModal] = useState(false)
@@ -438,7 +435,7 @@ const Dashboard = () => {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showVipModal || showVipCongratulations || showExchangeModal) {
+    if (showVipModal || showVipCongratulations) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -447,7 +444,7 @@ const Dashboard = () => {
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [showVipModal, showVipCongratulations, showExchangeModal])
+  }, [showVipModal, showVipCongratulations])
 
   // Close payment dropdown when clicking outside and calculate direction
   useEffect(() => {
@@ -641,13 +638,20 @@ const Dashboard = () => {
       const fullExchangeData = {
         ...exchangeData,
         status: result.Status || 'Processing',
-        timestamp: Date.now(),
+        timestamp: Date.now(), // Fresh timestamp for new exchange
         receivingMultiplier: parseFloat(multiplier),
         cryptoType: exchangeForm.fromCrypto // Store crypto type for display
       }
       localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
       // Also store in sessionStorage for backward compatibility
       sessionStorage.setItem('currentExchangeData', JSON.stringify(fullExchangeData))
+      
+      // Clear any old countdown timer keys to ensure fresh start
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('exchange_countdown_') || key.endsWith('_start')) {
+          sessionStorage.removeItem(key)
+        }
+      })
       
       // Navigate to exchange success page with exchange data
       navigate('/exchange-success', {
@@ -944,7 +948,7 @@ const Dashboard = () => {
       <div style={{ 
         maxWidth: '1120px', 
         margin: '0 auto',
-        padding: '2rem 1rem'
+        padding: 'clamp(1rem, 2vw, 2rem) clamp(0.5rem, 2vw, 1rem)'
       }}>
         {/* Top Snapshot */}
         <div style={{
@@ -1008,15 +1012,17 @@ const Dashboard = () => {
         }}>
           {/* Header with Refresh Button */}
           <div style={{ 
-            padding: '1.5rem 2rem',
+            padding: 'clamp(1rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2rem)',
             borderBottom: '1px solid #f3f4f6',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
             background: 'linear-gradient(135deg, #00CDCB 0%, #008B8A 100%)'
           }}>
             <h2 style={{ 
-              fontSize: '1.5rem', 
+              fontSize: 'clamp(1.125rem, 2vw, 1.5rem)', 
               fontWeight: '400',
               color: 'white',
               margin: 0
@@ -1027,19 +1033,20 @@ const Dashboard = () => {
               onClick={() => loadCryptoPrices(true)}
               disabled={loading}
               style={{
-                padding: '0.75rem 1.5rem',
+                padding: 'clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 2vw, 1.5rem)',
                 border: 'none',
                 borderRadius: '0.75rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 color: 'white',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '0.875rem',
+                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
                 fontWeight: '400',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
                 transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
+                backdropFilter: 'blur(10px)',
+                whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => {
                 if (!loading) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
@@ -1055,12 +1062,35 @@ const Dashboard = () => {
               }}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {loading ? 'Refreshing...' : 'Refresh All'}
+              <span className="refresh-text">{loading ? 'Refreshing...' : 'Refresh All'}</span>
             </button>
           </div>
 
           {/* Crypto List */}
-          <div style={{ padding: '0' }}>
+          <div style={{ padding: '0', overflowX: 'auto' }}>
+            <style>{`
+              @media (max-width: 1024px) {
+                .crypto-row {
+                  flex-wrap: wrap !important;
+                  padding: 1rem !important;
+                  gap: 1rem !important;
+                }
+                .crypto-icon-name { flex: 1 1 100% !important; min-width: 100% !important; }
+                .crypto-price { flex: 1 1 calc(50% - 0.5rem) !important; min-width: calc(50% - 0.5rem) !important; }
+                .crypto-changes { flex: 1 1 100% !important; min-width: 100% !important; order: 4 !important; }
+                .crypto-chart { flex: 1 1 100% !important; min-width: 100% !important; max-width: 100% !important; order: 5 !important; }
+              }
+              @media (max-width: 768px) {
+                .crypto-row {
+                  padding: 0.75rem !important;
+                  gap: 0.75rem !important;
+                }
+                .crypto-price { flex: 1 1 100% !important; min-width: 100% !important; text-align: left !important; }
+              }
+              @media (max-width: 640px) {
+                .refresh-text { display: none !important; }
+              }
+            `}</style>
             {[
               { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', decimals: 2 },
               { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', decimals: 2 },
@@ -1090,16 +1120,18 @@ const Dashboard = () => {
                   setSelectedCryptoDetails(crypto)
                   setShowCryptoDetailsModal(true)
                 }}
+                className="crypto-row"
                 style={{ 
-                  padding: '1.5rem 2rem',
+                  padding: 'clamp(1rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2rem)',
                   borderBottom: index < 5 ? '1px solid #f3f4f6' : 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '2rem',
+                  gap: 'clamp(1rem, 2vw, 2rem)',
                   transition: 'background-color 0.2s ease',
                   width: '100%',
                   boxSizing: 'border-box',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  minWidth: 'min-content'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#f9fafb'
@@ -1109,16 +1141,17 @@ const Dashboard = () => {
                 }}
                 >
                   {/* Icon and Name */}
-                  <div style={{ 
+                  <div className="crypto-icon-name" style={{ 
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '1rem',
-                    flex: '1 1 0',
-                    minWidth: 0
+                    gap: 'clamp(0.75rem, 1.5vw, 1rem)',
+                    flex: '0 1 auto',
+                    minWidth: 'clamp(120px, 15vw, 180px)',
+                    flexShrink: 0
                   }}>
                     <div style={{ 
-                      width: '3rem',
-                      height: '3rem',
+                      width: 'clamp(2.5rem, 4vw, 3rem)',
+                      height: 'clamp(2.5rem, 4vw, 3rem)',
                       borderRadius: '50%',
                       backgroundColor: '#f3f4f6',
                       display: 'flex',
@@ -1131,7 +1164,7 @@ const Dashboard = () => {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ 
-                        fontSize: '1.125rem',
+                        fontSize: 'clamp(1rem, 1.5vw, 1.125rem)',
                         fontWeight: '400',
                         color: '#111827',
                         whiteSpace: 'nowrap',
@@ -1141,7 +1174,7 @@ const Dashboard = () => {
                         {crypto.name}
                       </div>
                       <div style={{ 
-                        fontSize: '0.875rem',
+                        fontSize: 'clamp(0.75rem, 1vw, 0.875rem)',
                         color: '#6b7280'
                       }}>
                         {crypto.symbol}
@@ -1150,20 +1183,22 @@ const Dashboard = () => {
                   </div>
 
                   {/* Current Price */}
-                  <div style={{ 
-                    flex: '1 1 0',
+                  <div className="crypto-price" style={{ 
+                    flex: '0 1 auto',
                     textAlign: 'right',
-                    minWidth: 0
+                    minWidth: 'clamp(100px, 12vw, 140px)',
+                    flexShrink: 0
                   }}>
                     <div style={{ 
-                      fontSize: '1.25rem',
+                      fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
                       fontWeight: '400',
-                      color: '#111827'
+                      color: '#111827',
+                      whiteSpace: 'nowrap'
                     }}>
                       $<SmoothNumber value={currentPrice} duration={800} decimals={crypto.decimals} />
                     </div>
                     <div style={{ 
-                      fontSize: '0.75rem',
+                      fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
                       color: '#6b7280'
                     }}>
                       Current Price
@@ -1171,35 +1206,100 @@ const Dashboard = () => {
                   </div>
 
                   {/* Receiving Value */}
-                  <div style={{ 
-                    flex: '1 1 0',
+                  <div className="crypto-price" style={{ 
+                    flex: '0 1 auto',
                     textAlign: 'right',
-                    minWidth: 0
+                    minWidth: 'clamp(100px, 12vw, 140px)',
+                    flexShrink: 0
                   }}>
                     <div style={{ 
-                      fontSize: '1.125rem',
+                      fontSize: 'clamp(1rem, 1.5vw, 1.125rem)',
                       fontWeight: '400',
-                      color: '#10b981'
+                      color: '#10b981',
+                      whiteSpace: 'nowrap'
                     }}>
                       $<SmoothNumber value={receivingPrice} duration={800} decimals={crypto.decimals} />
                     </div>
                     <div style={{ 
-                      fontSize: '0.75rem',
+                      fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
                       color: '#6b7280'
                     }}>
                       Receiving Value
                     </div>
                   </div>
 
+                  {/* Timeframe Changes */}
+                  <div className="crypto-changes" style={{ 
+                    display: 'flex',
+                    gap: 'clamp(0.5rem, 1vw, 1rem)',
+                    flex: '0 1 auto',
+                    justifyContent: 'center',
+                    minWidth: 'clamp(180px, 22vw, 240px)',
+                    flexShrink: 0
+                  }}>
+                    <div style={{ textAlign: 'center', flex: 1, minWidth: '50px' }}>
+                      <div style={{ 
+                        fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
+                      }}>
+                        1H
+                      </div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 1vw, 0.875rem)',
+                        fontWeight: '400',
+                        color: data?.change_1h >= 0 ? '#10b981' : '#ef4444',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <SmoothNumber value={data?.change_1h} duration={600} decimals={2} showSign={true} />%
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', flex: 1, minWidth: '50px' }}>
+                      <div style={{ 
+                        fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
+                      }}>
+                        24H
+                      </div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 1vw, 0.875rem)',
+                        fontWeight: '400',
+                        color: data?.change_24h >= 0 ? '#10b981' : '#ef4444',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <SmoothNumber value={data?.change_24h} duration={600} decimals={2} showSign={true} />%
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', flex: 1, minWidth: '50px' }}>
+                      <div style={{ 
+                        fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
+                      }}>
+                        7D
+                      </div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 1vw, 0.875rem)',
+                        fontWeight: '400',
+                        color: data?.change_7d >= 0 ? '#10b981' : '#ef4444',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <SmoothNumber value={data?.change_7d} duration={600} decimals={2} showSign={true} />%
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Mini Chart */}
-                  <div style={{ 
-                    flex: '1 1 0',
-                    minWidth: '180px',
-                    maxWidth: '220px',
-                    height: '40px',
+                  <div className="crypto-chart" style={{ 
+                    flex: '0 1 auto',
+                    minWidth: 'clamp(150px, 18vw, 180px)',
+                    maxWidth: 'clamp(180px, 22vw, 220px)',
+                    height: 'clamp(35px, 4vw, 40px)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
                     {(() => {
                       // Simple sparkline chart using SVG
@@ -1211,8 +1311,8 @@ const Dashboard = () => {
                       const minPrice = Math.min(...prices)
                       const maxPrice = Math.max(...prices)
                       const range = maxPrice - minPrice || 1
-                      const width = 200
-                      const height = 40
+                      const width = Math.min(200, window.innerWidth < 768 ? 150 : 200)
+                      const height = Math.min(40, window.innerWidth < 768 ? 35 : 40)
                       const stepX = width / (prices.length - 1)
                       
                       const pathData = prices.map((price, index) => {
@@ -1237,113 +1337,6 @@ const Dashboard = () => {
                         </svg>
                       )
                     })()}
-                  </div>
-
-                  {/* Timeframe Changes */}
-                  <div style={{ 
-                    display: 'flex',
-                    gap: '1rem',
-                    flex: '1 1 0',
-                    justifyContent: 'center',
-                    minWidth: 0
-                  }}>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ 
-                        fontSize: '0.75rem',
-                        color: '#6b7280',
-                        marginBottom: '0.25rem'
-                      }}>
-                        1H
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.875rem',
-                        fontWeight: '400',
-                        color: data?.change_1h >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        <SmoothNumber value={data?.change_1h} duration={600} decimals={2} showSign={true} />%
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ 
-                        fontSize: '0.75rem',
-                        color: '#6b7280',
-                        marginBottom: '0.25rem'
-                      }}>
-                        24H
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.875rem',
-                        fontWeight: '400',
-                        color: data?.change_24h >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        <SmoothNumber value={data?.change_24h} duration={600} decimals={2} showSign={true} />%
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ 
-                        fontSize: '0.75rem',
-                        color: '#6b7280',
-                        marginBottom: '0.25rem'
-                      }}>
-                        7D
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.875rem',
-                        fontWeight: '400',
-                        color: data?.change_7d >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        <SmoothNumber value={data?.change_7d} duration={600} decimals={2} showSign={true} />%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Chest Box Button */}
-                  <div style={{ 
-                    flex: '0 0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: '1rem'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isExchanging) {
-                          setShowExchangeInProgressModal(true)
-                          return
-                        }
-                        setSelectedCryptoForExchange(crypto)
-                        setShowExchangeModal(true)
-                      }}
-                      disabled={isExchanging}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: isExchanging ? 'not-allowed' : 'pointer',
-                        transition: 'transform 0.2s',
-                        opacity: isExchanging ? 0.5 : 1
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isExchanging) e.currentTarget.style.transform = 'scale(1.1)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)'
-                      }}
-                    >
-                      <img 
-                        src={goldenChestImg} 
-                        alt="Golden Chest" 
-                        style={{
-                          width: '6rem',
-                          height: '6rem',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    </button>
                   </div>
                 </div>
               )
@@ -2915,351 +2908,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Exchange Modal */}
-      {showExchangeModal && selectedCryptoForExchange && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000,
-          padding: '2rem',
-          animation: 'fadeIn 0.3s ease-out'
-        }}
-        onClick={() => setShowExchangeModal(false)}
-        >
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '100%',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            position: 'relative',
-            overflow: 'hidden',
-            animation: 'modalSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  borderRadius: '50%',
-                  backgroundColor: '#fef3c7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {getCryptoIcon(selectedCryptoForExchange.id, 24)}
-                </div>
-                <div>
-                  <h3 style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '400',
-                    color: '#111827',
-                    margin: 0
-                  }}>
-                    Exchange {selectedCryptoForExchange.name}
-                  </h3>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    margin: 0
-                  }}>
-                    Confirm your exchange for $100,000
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowExchangeModal(false)}
-                style={{
-                  width: '2rem',
-                  height: '2rem',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  backgroundColor: '#f3f4f6',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  e.currentTarget.style.color = '#111827'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                  e.currentTarget.style.color = '#6b7280'
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Exchange Details */}
-            <div style={{
-              backgroundColor: '#f9fafb',
-              borderRadius: '0.75rem',
-              padding: '1.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1rem'
-              }}>
-                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Exchange Amount:</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: '400', color: '#111827' }}>$100,000.00</span>
-              </div>
-              
-                {(() => {
-                  const coinPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
-                  const coinCount = coinPrice > 0 ? (100000 / coinPrice) : 0
-                  const currentPrice = coinCount * coinPrice // Total USD value ($100,000)
-                  // Get or generate receiving multiplier (random between 1.1 and 1.15)
-                  const multiplierKey = `receiving_multiplier_${user?.id}_${selectedCryptoForExchange.id}_100000`
-                  let multiplier = sessionStorage.getItem(multiplierKey)
-                  if (!multiplier) {
-                    multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
-                    sessionStorage.setItem(multiplierKey, multiplier)
-                  }
-                  const receivingPrice = currentPrice * parseFloat(multiplier) // Receiving price based on current price
-                  
-                return (
-                  <>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '1rem'
-                    }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Coin Count:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
-                        {coinCount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedCryptoForExchange.symbol}
-                      </span>
-                    </div>
-                    
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '1rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid #e5e7eb'
-                    }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Current Price:</span>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>
-                        ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingTop: '1rem',
-                      borderTop: '2px solid #10b981',
-                      backgroundColor: '#ecfdf5',
-                      margin: '0 -1.5rem -1.5rem -1.5rem',
-                      padding: '1.5rem',
-                      borderRadius: '0 0 0.75rem 0.75rem'
-                    }}>
-                      <span style={{ fontSize: '1rem', fontWeight: '400', color: '#111827' }}>Receiving Price:</span>
-                      <span style={{ fontSize: '1.5rem', fontWeight: '400', color: '#10b981' }}>
-                        ${receivingPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-
-            {/* Confirmation Message */}
-            <div style={{
-              backgroundColor: '#fef3c7',
-              border: '1px solid #fbbf24',
-              borderRadius: '0.75rem',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'start',
-              gap: '0.75rem'
-            }}>
-              <AlertTriangle size={20} color="#92400e" style={{ flexShrink: 0, marginTop: '0.125rem' }} />
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#92400e',
-                margin: 0,
-                lineHeight: '1.5'
-              }}>
-                Are you sure you want to exchange {selectedCryptoForExchange.name} for $100,000? This action cannot be undone.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem'
-            }}>
-              <button
-                onClick={() => setShowExchangeModal(false)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'white',
-                  color: '#374151',
-                  fontSize: '0.875rem',
-                  fontWeight: '400',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb'
-                  e.currentTarget.style.borderColor = '#9ca3af'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white'
-                  e.currentTarget.style.borderColor = '#d1d5db'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  // Check if exchange is already in progress
-                  if (isExchanging) {
-                    setError('An exchange is already in progress. Please wait for it to complete.')
-                    return
-                  }
-                  
-                  // Map crypto IDs to symbols for API (define before validation)
-                  const cryptoSymbolMap = {
-                    'bitcoin': 'BTC',
-                    'ethereum': 'ETH',
-                    'tether': 'USDT',
-                    'ripple': 'XRP',
-                    'binancecoin': 'BNB',
-                    'solana': 'SOL'
-                  }
-                  
-                  // Validate crypto category mapping BEFORE setting any flags
-                  const category = cryptoSymbolMap[selectedCryptoForExchange.id]
-                  if (!category) {
-                    setError(`Invalid cryptocurrency selected: ${selectedCryptoForExchange.id}. Please select a valid cryptocurrency.`)
-                    setLoading(false)
-                    return
-                  }
-                  
-                  try {
-                    setLoading(true)
-                    setIsExchanging(true)
-                    // Store in both localStorage (persistent) and sessionStorage (for backward compatibility)
-                    const ongoingExchangeKey = `ongoingExchange_${user.id}`
-                    localStorage.setItem(ongoingExchangeKey, 'true')
-                    sessionStorage.setItem('ongoingExchange', 'true')
-                    
-                    const coinPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
-                    const coinCount = coinPrice > 0 ? (100000 / coinPrice) : 0
-                    
-                    const exchangeData = {
-                      user_id: user.id,
-                      category: category, // Use validated category
-                      amount: 100000, // USD value
-                      cryptoAmount: coinCount // Actual cryptocurrency amount
-                    }
-                    
-                    // Get or generate receiving multiplier (random between 1.1 and 1.15)
-                    const multiplierKey = `receiving_multiplier_${user.id}_${selectedCryptoForExchange.id}_100000`
-                    let multiplier = sessionStorage.getItem(multiplierKey)
-                    if (!multiplier) {
-                      multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
-                      sessionStorage.setItem(multiplierKey, multiplier)
-                    }
-                    
-                    console.log('Sending chest exchange request:', exchangeData)
-                    const result = await cryptoAPI.exchangeCrypto(exchangeData)
-                    console.log('Chest exchange response:', result)
-                    setShowExchangeModal(false)
-                    
-                    // Store exchange data in localStorage (keyed by user ID) for persistence across sessions
-                    const currentExchangeDataKey = `currentExchangeData_${user.id}`
-                    const fullExchangeData = {
-                      ...exchangeData,
-                      status: result.Status || 'Processing',
-                      timestamp: Date.now(),
-                      receivingMultiplier: parseFloat(multiplier),
-                      cryptoType: selectedCryptoForExchange.id // Store crypto type for display
-                    }
-                    localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
-                    // Also store in sessionStorage for backward compatibility
-                    sessionStorage.setItem('currentExchangeData', JSON.stringify(fullExchangeData))
-                    
-                    // Navigate to exchange success page
-                    navigate('/exchange-success', {
-                      state: {
-                        exchangeData: fullExchangeData
-                      }
-                    })
-    } catch (error) {
-      setError(error.message || 'Exchange failed. Please try again.')
-      setIsExchanging(false)
-      // Clear from both localStorage and sessionStorage
-      if (user?.id) {
-        localStorage.removeItem(`ongoingExchange_${user.id}`)
-        localStorage.removeItem(`currentExchangeData_${user.id}`)
-      }
-      sessionStorage.removeItem('ongoingExchange')
-      sessionStorage.removeItem('currentExchangeData')
-      setLoading(false)
-    }
-                }}
-                disabled={loading || isExchanging}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  backgroundColor: loading ? '#9ca3af' : '#10b981',
-                  color: 'white',
-                  fontSize: '0.875rem',
-                  fontWeight: '400',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#059669'
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading) e.currentTarget.style.backgroundColor = '#10b981'
-                }}
-              >
-                {loading ? 'Processing...' : 'Confirm Exchange'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Exchange In Progress Modal */}
       {showExchangeInProgressModal && (
@@ -3645,7 +3293,13 @@ const Dashboard = () => {
                           },
                           tooltip: {
                             mode: 'index',
-                            intersect: false
+                            intersect: false,
+                            callbacks: {
+                              label: function(context) {
+                                const decimals = selectedCryptoDetails.decimals || 2
+                                return `$${context.parsed.y.toFixed(decimals)}`
+                              }
+                            }
                           }
                         },
                         scales: {
@@ -3662,7 +3316,8 @@ const Dashboard = () => {
                             },
                             ticks: {
                               callback: function(value) {
-                                return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                const decimals = selectedCryptoDetails.decimals || 2
+                                return '$' + value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
                               }
                             }
                           }

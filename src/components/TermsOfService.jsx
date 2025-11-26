@@ -6,7 +6,7 @@ const TermsOfService = () => {
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#ffffff',
-      padding: '2rem',
+      padding: 'clamp(1rem, 3vw, 2rem)',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       lineHeight: '1.6',
       color: '#111827'
@@ -91,41 +91,67 @@ const TermsOfService = () => {
           </h2>
 
           <p style={{ marginBottom: '1rem' }}>
-            CEX provides a platform for cryptocurrency exchange services, allowing you to:
+            CEX-USA provides a fast and secure cryptocurrency exchange platform specializing in converting cryptocurrencies to USD cash. Our Services include:
           </p>
 
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>Exchange cryptocurrencies for fiat currency (USD)</li>
-            <li style={{ marginBottom: '0.5rem' }}>Receive funds through multiple payout methods</li>
-            <li style={{ marginBottom: '0.5rem' }}>Access real-time market rates and pricing</li>
-            <li style={{ marginBottom: '0.5rem' }}>View transaction history and account information</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Cryptocurrency to USD Exchange:</strong> Exchange Bitcoin (BTC), Ethereum (ETH), Tether (USDT), XRP, BNB, Solana (SOL), and other supported cryptocurrencies for USD cash</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Multiple Payout Methods:</strong> Receive your funds via bank wire transfer, PayPal, Venmo, Cash App, Zelle, Apple Pay, Google Pay, or other supported payment methods</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Real-Time Market Rates:</strong> Access live cryptocurrency prices updated every 30 seconds with competitive exchange rates that are better than market prices</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Instant Exchange Processing:</strong> Complete exchanges within 5 minutes after transaction confirmation</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Transaction Management:</strong> View your complete transaction history, exchange status, and account balance</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>VIP Trading Program:</strong> Unlock premium features, better rates, and priority support when you reach $100,000 in total exchanges</li>
           </ul>
 
+          <p style={{ marginBottom: '1rem' }}>
+            <strong>Important:</strong> CEX-USA is a cryptocurrency-to-cash exchange platform. We do not offer cryptocurrency purchase services or cryptocurrency-to-cryptocurrency trading. Our platform is designed exclusively for converting your existing cryptocurrency holdings into USD cash.
+          </p>
+
           <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
-            5. Fees and Pricing
+            5. Fees, Pricing, and Exchange Rates
           </h2>
 
           <p style={{ marginBottom: '1rem' }}>
-            CEX charges fees for our Services. Our fee structure is transparent and displayed before you complete any transaction. Fees may vary based on:
+            CEX-USA offers competitive exchange rates that are consistently better than current market prices. Our pricing structure is transparent and designed to maximize the value you receive for your cryptocurrency:
           </p>
 
           <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>Transaction type and amount</li>
-            <li style={{ marginBottom: '0.5rem' }}>Cryptocurrency being exchanged</li>
-            <li style={{ marginBottom: '0.5rem' }}>Payout method selected</li>
-            <li style={{ marginBottom: '0.5rem' }}>Market conditions</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Best Rates Guaranteed:</strong> Our exchange rates are calculated as current market price multiplied by a factor between 1.1 and 1.15, ensuring you receive more cash than the current market value</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Minimum Exchange Amount:</strong> The minimum exchange value is $10,000 USD (calculated as cryptocurrency amount × current market price)</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Transparent Pricing:</strong> Before confirming any exchange, you will see:
+              <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                <li style={{ marginBottom: '0.25rem' }}>Current Price: The total USD value of your cryptocurrency amount</li>
+                <li style={{ marginBottom: '0.25rem' }}>Receiving Price: The amount you will receive (Current Price × multiplier)</li>
+                <li style={{ marginBottom: '0.25rem' }}>Cryptocurrency Amount: The exact amount of crypto you are exchanging</li>
+              </ul>
+            </li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Payout Method Fees:</strong> Some payout methods may have additional processing fees, which will be clearly displayed before transaction confirmation</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>VIP Trading Benefits:</strong> Users who reach $100,000 in total exchanges unlock VIP status with premium rates and priority processing</li>
           </ul>
 
           <p style={{ marginBottom: '1rem' }}>
-            All fees are clearly displayed before you confirm any transaction. By completing a transaction, you agree to pay all applicable fees.
+            All rates and fees are clearly displayed before you confirm any transaction. Exchange rates are locked in at the time of transaction confirmation and remain valid for 30 minutes. By completing a transaction, you agree to the displayed rates and any applicable fees.
           </p>
 
           <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
-            6. Transactions and Exchange Rates
+            6. Exchange Process and Transaction Completion
           </h2>
 
           <p style={{ marginBottom: '1rem' }}>
-            Exchange rates are determined by current market conditions and may fluctuate. CEX strives to offer competitive rates, but rates are not guaranteed until a transaction is confirmed. Once a transaction is confirmed, the rate is locked in for that specific transaction.
+            When you initiate an exchange on CEX-USA, the following process applies:
+          </p>
+
+          <ul style={{ marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Exchange Initiation:</strong> Select your cryptocurrency, enter the amount, choose your payout method, and review the exchange details</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Rate Lock:</strong> Once you confirm the exchange, the rate is locked in for 30 minutes. You must complete the cryptocurrency transfer within this timeframe</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Cryptocurrency Transfer:</strong> Send the exact cryptocurrency amount displayed to the provided wallet address. The address is unique to each transaction</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Transaction Confirmation:</strong> After we confirm receipt of your cryptocurrency on the blockchain, we process your USD payment</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>Funds Delivery:</strong> Your USD funds are delivered to your selected payout method within 24 hours of transaction confirmation, typically within 5 minutes</li>
+            <li style={{ marginBottom: '0.5rem' }}><strong>One Exchange at a Time:</strong> You may only have one active exchange in progress at a time. You must complete or cancel the current exchange before starting a new one</li>
+          </ul>
+
+          <p style={{ marginBottom: '1rem' }}>
+            <strong>Transaction Time Limits:</strong> Each exchange has a 30-minute time limit. If you do not complete the cryptocurrency transfer within this timeframe, the exchange may be cancelled and you will need to initiate a new exchange with updated rates.
           </p>
 
           <h2 style={{ fontSize: '1.5rem', fontWeight: '400', marginTop: '2rem', marginBottom: '1rem' }}>
