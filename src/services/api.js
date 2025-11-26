@@ -146,6 +146,33 @@ export const cryptoAPI = {
     }
   },
 
+  // GET historical price data from CoinGecko for charts
+  getCoinGeckoHistory: async (coinId, days = 1) => {
+    try {
+      // Map our coin IDs to CoinGecko IDs
+      const coinGeckoMap = {
+        'bitcoin': 'bitcoin',
+        'ethereum': 'ethereum',
+        'tether': 'tether',
+        'ripple': 'ripple',
+        'binancecoin': 'binancecoin',
+        'solana': 'solana'
+      }
+      
+      const geckoId = coinGeckoMap[coinId] || coinId
+      const url = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${days}&interval=hourly`
+      
+      const response = await axios.get(url, {
+        headers: { 'Accept': 'application/json' }
+      })
+      
+      return response.data
+    } catch (error) {
+      console.error('CoinGecko history API error:', error.response?.data || error.message)
+      throw error.response?.data || error.message
+    }
+  },
+
   // GET prices directly from CoinGecko (client-side, no backend needed)
   // Returns keyed object by coin id with price, changes, market cap, and volume
   getCoinGeckoPrices: async () => {

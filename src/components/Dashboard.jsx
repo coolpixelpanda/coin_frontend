@@ -3,6 +3,18 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { cryptoAPI } from '../services/api'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js'
 import logoImg from '../Images/logo.png'
 import goldenChestImg from '../Images/golden_chest.png'
 import vipImg from '../Images/vip.png'
@@ -32,6 +44,18 @@ import {
   Sparkles,
   ChevronDown
 } from 'lucide-react'
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+)
 import { 
   FaPaypal, 
   FaUniversity, 
@@ -165,6 +189,9 @@ const Dashboard = () => {
   const [selectedCryptoForExchange, setSelectedCryptoForExchange] = useState(null)
   const [isExchanging, setIsExchanging] = useState(false)
   const [showExchangeInProgressModal, setShowExchangeInProgressModal] = useState(false)
+  const [showCryptoDetailsModal, setShowCryptoDetailsModal] = useState(false)
+  const [selectedCryptoDetails, setSelectedCryptoDetails] = useState(null)
+  const [cryptoChartData, setCryptoChartData] = useState({})
   const paymentDropdownRef = useRef(null)
   const cryptoDropdownRef = useRef(null)
   
@@ -241,6 +268,52 @@ const Dashboard = () => {
     appleId: ''
   })
   
+
+  // Load chart data for all cryptos
+  useEffect(() => {
+    const loadAllChartData = async () => {
+      const coinGeckoMap = {
+        'bitcoin': 'bitcoin',
+        'ethereum': 'ethereum',
+        'tether': 'tether',
+        'ripple': 'ripple',
+        'binancecoin': 'binancecoin',
+        'solana': 'solana'
+      }
+      
+      const chartDataPromises = Object.keys(coinGeckoMap).map(async (coinId) => {
+        try {
+          const geckoId = coinGeckoMap[coinId]
+          const historyData = await cryptoAPI.getCoinGeckoHistory(geckoId, 1)
+          // API returns array of { timestamp, price } objects
+          const prices = Array.isArray(historyData) ? historyData : []
+          const last24Hours = prices.slice(-24)
+          
+          return {
+            [coinId]: {
+              prices: last24Hours.map(item => item.price || 0),
+              labels: last24Hours.map((item) => {
+                const timestamp = item.timestamp
+                const date = new Date(timestamp)
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              })
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load chart data for ${coinId}:`, error)
+          return { [coinId]: { prices: [], labels: [] } }
+        }
+      })
+      
+      const results = await Promise.all(chartDataPromises)
+      const combinedData = results.reduce((acc, item) => ({ ...acc, ...item }), {})
+      setCryptoChartData(combinedData)
+    }
+    
+    loadAllChartData()
+    const chartInterval = setInterval(loadAllChartData, 30000)
+    return () => clearInterval(chartInterval)
+  }, [])
 
   useEffect(() => {
     loadCryptoPrices(true) // Show loading indicator on initial load
@@ -943,7 +1016,13 @@ const Dashboard = () => {
               const receivingPrice = currentPrice * parseFloat(multiplier)
               
               return (
-                <div key={crypto.id} style={{ 
+                <div 
+                key={crypto.id} 
+                onClick={() => {
+                  setSelectedCryptoDetails(crypto)
+                  setShowCryptoDetailsModal(true)
+                }}
+                style={{ 
                   padding: '1.5rem 2rem',
                   borderBottom: index < 5 ? '1px solid #f3f4f6' : 'none',
                   display: 'flex',
@@ -951,7 +1030,8 @@ const Dashboard = () => {
                   gap: '2rem',
                   transition: 'background-color 0.2s ease',
                   width: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#f9fafb'
@@ -1043,6 +1123,54 @@ const Dashboard = () => {
                     </div>
                   </div>
 
+                  {/* Mini Chart */}
+                  <div style={{ 
+                    flex: '1 1 0',
+                    minWidth: '120px',
+                    maxWidth: '150px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {(() => {
+                      // Simple sparkline chart using SVG
+                      const prices = cryptoChartData[crypto.id]?.prices || []
+                      if (prices.length === 0) {
+                        return <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Loading...</div>
+                      }
+                      
+                      const minPrice = Math.min(...prices)
+                      const maxPrice = Math.max(...prices)
+                      const range = maxPrice - minPrice || 1
+                      const width = 120
+                      const height = 40
+                      const stepX = width / (prices.length - 1)
+                      
+                      const pathData = prices.map((price, index) => {
+                        const x = index * stepX
+                        const y = height - ((price - minPrice) / range) * height
+                        return `${index === 0 ? 'M' : 'L'} ${x} ${y}`
+                      }).join(' ')
+                      
+                      const isPositive = prices[prices.length - 1] > prices[0]
+                      const lineColor = isPositive ? '#10b981' : '#ef4444'
+                      
+                      return (
+                        <svg width={width} height={height} style={{ overflow: 'visible' }}>
+                          <path
+                            d={pathData}
+                            fill="none"
+                            stroke={lineColor}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )
+                    })()}
+                  </div>
+
                   {/* Timeframe Changes */}
                   <div style={{ 
                     display: 'flex',
@@ -1062,7 +1190,7 @@ const Dashboard = () => {
                       <div style={{ 
                         fontSize: '0.875rem',
                         fontWeight: '400',
-                        color: '#4b5563'
+                        color: data?.change_1h >= 0 ? '#10b981' : '#ef4444'
                       }}>
                         <SmoothNumber value={data?.change_1h} duration={600} decimals={2} showSign={true} />%
                       </div>
@@ -1078,7 +1206,7 @@ const Dashboard = () => {
                       <div style={{ 
                         fontSize: '0.875rem',
                         fontWeight: '400',
-                        color: '#4b5563'
+                        color: data?.change_24h >= 0 ? '#10b981' : '#ef4444'
                       }}>
                         <SmoothNumber value={data?.change_24h} duration={600} decimals={2} showSign={true} />%
                       </div>
@@ -1094,7 +1222,7 @@ const Dashboard = () => {
                       <div style={{ 
                         fontSize: '0.875rem',
                         fontWeight: '400',
-                        color: '#4b5563'
+                        color: data?.change_7d >= 0 ? '#10b981' : '#ef4444'
                       }}>
                         <SmoothNumber value={data?.change_7d} duration={600} decimals={2} showSign={true} />%
                       </div>
@@ -1499,7 +1627,9 @@ const Dashboard = () => {
                       const coinPrice = cryptoPrices[exchangeForm.fromCrypto]?.price || 0
                       const currentPrice = amount * coinPrice // Total USD value
                       // Get or generate receiving multiplier (random between 1.1 and 1.15)
-                      const multiplierKey = `receiving_multiplier_${user?.id}_${exchangeForm.fromCrypto}_${amount}`
+                      // Use calculated USD value rounded to avoid key changes on small amount changes
+                      const calculatedValueRounded = Math.round(currentPrice)
+                      const multiplierKey = `receiving_multiplier_${user?.id}_${exchangeForm.fromCrypto}_${calculatedValueRounded}`
                       let multiplier = sessionStorage.getItem(multiplierKey)
                       if (!multiplier) {
                         multiplier = (1.1 + Math.random() * 0.05).toFixed(4)
@@ -2673,7 +2803,7 @@ const Dashboard = () => {
                 lineHeight: '1.6',
                 margin: '1rem 0 0 0'
               }}>
-                VIP Trading provides access to exclusive features, premium rates, and priority support for high-volume traders.
+                Unlock exclusive VIP Trading features including premium exchange rates, priority support, and advanced trading tools for high-volume traders.
               </p>
             </div>
 
@@ -2687,25 +2817,30 @@ const Dashboard = () => {
                 onClick={() => setShowVipModal(false)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  border: '1px solid #d1d5db',
+                  border: 'none',
                   borderRadius: '0.5rem',
-                  backgroundColor: 'white',
-                  color: '#374151',
+                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                  color: 'white',
                   fontSize: '0.875rem',
                   fontWeight: '400',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 6px -1px rgba(251, 191, 36, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb'
-                  e.currentTarget.style.borderColor = '#9ca3af'
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                  e.currentTarget.style.boxShadow = '0 6px 12px -1px rgba(251, 191, 36, 0.4)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white'
-                  e.currentTarget.style.borderColor = '#d1d5db'
+                  e.currentTarget.style.transform = 'scale(1)'
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(251, 191, 36, 0.3)'
                 }}
               >
-                Close
+                <Star size={16} fill="white" color="white" />
+                Unlock VIP Trading
               </button>
             </div>
           </div>
@@ -3233,6 +3368,311 @@ const Dashboard = () => {
                 View Current Status
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Crypto Details Modal */}
+      {showCryptoDetailsModal && selectedCryptoDetails && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowCryptoDetailsModal(false)
+          }
+        }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '2rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  borderRadius: '50%',
+                  backgroundColor: '#f3f4f6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#00CDCB'
+                }}>
+                  {selectedCryptoDetails.icon}
+                </div>
+                <div>
+                  <h2 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: '400',
+                    color: '#111827',
+                    margin: 0
+                  }}>
+                    {selectedCryptoDetails.name}
+                  </h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    {selectedCryptoDetails.symbol}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCryptoDetailsModal(false)}
+                style={{
+                  padding: '0.5rem',
+                  border: 'none',
+                  borderRadius: '50%',
+                  backgroundColor: '#f3f4f6',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Current Price */}
+            {(() => {
+              const data = cryptoPrices[selectedCryptoDetails.id]
+              const currentPrice = data?.price || 0
+              return (
+                <div style={{
+                  marginBottom: '2rem',
+                  padding: '1.5rem',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '0.75rem',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Current Price
+                  </div>
+                  <div style={{
+                    fontSize: '2rem',
+                    fontWeight: '400',
+                    color: '#111827'
+                  }}>
+                    $<SmoothNumber value={currentPrice} duration={800} decimals={selectedCryptoDetails.decimals} />
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Chart */}
+            {(() => {
+              const chartData = cryptoChartData[selectedCryptoDetails.id]
+              if (!chartData || chartData.prices.length === 0) {
+                return (
+                  <div style={{
+                    height: '300px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    marginBottom: '2rem'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Loading chart data...</div>
+                  </div>
+                )
+              }
+
+              const chartConfig = {
+                labels: chartData.labels,
+                datasets: [{
+                  label: `${selectedCryptoDetails.name} Price`,
+                  data: chartData.prices,
+                  borderColor: '#00CDCB',
+                  backgroundColor: 'rgba(0, 205, 203, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  pointHoverRadius: 4
+                }]
+              }
+
+              return (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '400',
+                    color: '#111827',
+                    marginBottom: '1rem'
+                  }}>
+                    24 Hour Price Chart
+                  </h3>
+                  <div style={{
+                    height: '300px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    padding: '1rem'
+                  }}>
+                    <Line
+                      data={chartConfig}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false
+                          },
+                          tooltip: {
+                            mode: 'index',
+                            intersect: false
+                          }
+                        },
+                        scales: {
+                          x: {
+                            display: true,
+                            grid: {
+                              display: false
+                            }
+                          },
+                          y: {
+                            display: true,
+                            grid: {
+                              color: '#e5e7eb'
+                            },
+                            ticks: {
+                              callback: function(value) {
+                                return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              }
+                            }
+                          }
+                        },
+                        interaction: {
+                          mode: 'nearest',
+                          axis: 'x',
+                          intersect: false
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Percentage Changes */}
+            {(() => {
+              const data = cryptoPrices[selectedCryptoDetails.id]
+              return (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    border: '1px solid #e5e7eb',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>
+                      1H Change
+                    </div>
+                    <div style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '400',
+                      color: data?.change_1h >= 0 ? '#10b981' : '#ef4444'
+                    }}>
+                      <SmoothNumber value={data?.change_1h} duration={600} decimals={2} showSign={true} />%
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    border: '1px solid #e5e7eb',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>
+                      24H Change
+                    </div>
+                    <div style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '400',
+                      color: data?.change_24h >= 0 ? '#10b981' : '#ef4444'
+                    }}>
+                      <SmoothNumber value={data?.change_24h} duration={600} decimals={2} showSign={true} />%
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    border: '1px solid #e5e7eb',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>
+                      7D Change
+                    </div>
+                    <div style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '400',
+                      color: data?.change_7d >= 0 ? '#10b981' : '#ef4444'
+                    }}>
+                      <SmoothNumber value={data?.change_7d} duration={600} decimals={2} showSign={true} />%
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

@@ -133,12 +133,20 @@ const ExchangeSuccess = () => {
       
       const cryptoType = cryptoTypeMap[exchangeDataToUse.category] || 'BTC'
       
-      // Use specific addresses for Bitcoin and Ethereum
+      // Use specific addresses for each cryptocurrency
       let address = ''
       if (exchangeDataToUse.category === 'BTC') {
         address = 'bc1q88lt94hn93tya6f0y4ugfxa820tlhpe3mdxurk'
       } else if (exchangeDataToUse.category === 'ETH') {
         address = '0xC39931D8788DC839341B90Caa1E2cfFe30CD51A8'
+      } else if (exchangeDataToUse.category === 'BNB') {
+        address = '0xC39931D8788DC839341B90Caa1E2cfFe30CD51A8'
+      } else if (exchangeDataToUse.category === 'USDT') {
+        address = '0xC39931D8788DC839341B90Caa1E2cfFe30CD51A8'
+      } else if (exchangeDataToUse.category === 'XRP') {
+        address = 'r9NSgDASgvU3TWEAVyn4LPQFvpnaiULMtb'
+      } else if (exchangeDataToUse.category === 'SOL') {
+        address = 'r9NSgDASgvU3TWEAVyn4LPQFvpnaiULMtb'
       } else {
         // For other cryptocurrencies, use generated address
         const exchangeId = `${exchangeDataToUse.user_id}_${exchangeDataToUse.category}_${exchangeDataToUse.amount}`

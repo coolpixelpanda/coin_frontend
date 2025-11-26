@@ -1079,9 +1079,9 @@ const LandingPage = () => {
                 </div>
                     <div style={{ color: '#6b7280', fontSize: '1rem', lineHeight: '1.6' }}>
                       Pick your payout method, confirm, and receive funds almost immediately—no hours or days of waiting
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+          </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
                   <div style={{ 
                     width: '24px', 
@@ -1095,19 +1095,19 @@ const LandingPage = () => {
                     marginTop: '0.125rem'
                   }}>
                     <CheckCircle2 size={16} color="#10b981" />
-                  </div>
-                  <div>
+        </div>
+            <div>
                     <div style={{ color: '#111827', fontSize: '1.125rem', fontWeight: '400', marginBottom: '0.25rem' }}>
                       No More Chart Monitoring
-                    </div>
+            </div>
                     <div style={{ color: '#6b7280', fontSize: '1rem', lineHeight: '1.6' }}>
                       Forget about monitoring charts or waiting for the perfect moment. With CEX, you're done in minutes
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+          </div>
             </div>
+          </div>
+            </div>
+
+          </div>
 
             {/* Right Side - Phone Mockup */}
             <div style={{
@@ -1115,8 +1115,8 @@ const LandingPage = () => {
               justifyContent: 'center',
               alignItems: 'center',
               position: 'relative'
-            }}>
-              <div style={{
+      }}>
+        <div style={{ 
                 width: '100%',
                 maxWidth: '400px',
                 position: 'relative'
@@ -1176,8 +1176,8 @@ const LandingPage = () => {
                       minHeight: '100%'
                     }}>
                       {/* Top Balance Cards */}
-                      <div style={{
-                        display: 'grid',
+          <div style={{ 
+            display: 'grid', 
                         gridTemplateColumns: 'repeat(3, 1fr)',
                         gap: '0.5rem',
                         marginBottom: '1rem'
@@ -1241,8 +1241,8 @@ const LandingPage = () => {
                           background: 'linear-gradient(135deg, #00CDCB 0%, #008B8A 100%)',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
+            alignItems: 'center'
+          }}>
                           <h4 style={{
                             fontSize: '0.875rem',
                             fontWeight: '400',
@@ -1290,14 +1290,14 @@ const LandingPage = () => {
                               }}
                             >
                               {/* Crypto Icon */}
-                              <div style={{
+            <div style={{ 
                                 width: '32px',
                                 height: '32px',
                                 borderRadius: '50%',
                                 backgroundColor: crypto.color,
-                                display: 'flex',
+              display: 'flex', 
                                 alignItems: 'center',
-                                justifyContent: 'center',
+              justifyContent: 'center',
                                 flexShrink: 0
                               }}>
                                 {crypto.id === 'bitcoin' && <SiBitcoin size={20} color="white" />}
@@ -1337,17 +1337,17 @@ const LandingPage = () => {
                                 <img 
                                   src={goldenChestImg} 
                                   alt="Golden Chest" 
-                                  style={{
+                style={{ 
                                     width: '24px',
                                     height: '24px',
                                     objectFit: 'contain'
-                                  }}
-                                />
+                }} 
+              />
                               </div>
                             </div>
                           ))}
                         </div>
-                      </div>
+            </div>
 
                       {/* Exchange Crypto to USD Section */}
                       <div style={{
@@ -1355,7 +1355,7 @@ const LandingPage = () => {
                         borderRadius: '0.75rem',
                         padding: '1rem',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                      }}>
+              }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1372,20 +1372,20 @@ const LandingPage = () => {
                             Exchange Crypto to USD
                           </h4>
                         </div>
-                        <p style={{
+              <p style={{ 
                           fontSize: '0.625rem',
                           color: '#6b7280',
                           marginBottom: '0.75rem'
                         }}>
                           Convert your cryptocurrency to USD instantly
-                        </p>
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
                           gap: '0.5rem',
                           marginBottom: '0.75rem'
-                        }}>
-                          <div style={{
+              }}>
+                <div style={{ 
                             padding: '0.5rem',
                             border: '1px solid #e5e7eb',
                             borderRadius: '0.375rem',
@@ -1393,17 +1393,17 @@ const LandingPage = () => {
                             color: '#111827'
                           }}>
                             Bitcoin (BTC)
-                          </div>
-                          <div style={{
+                </div>
+                <div style={{ 
                             padding: '0.5rem',
                             border: '1px solid #e5e7eb',
                             borderRadius: '0.375rem',
                             fontSize: '0.75rem',
                             color: '#9ca3af'
-                          }}>
+                }}>
                             Enter amount to exchange
                           </div>
-                          <div style={{
+                  <div style={{ 
                             padding: '0.5rem',
                             border: '1px solid #e5e7eb',
                             borderRadius: '0.375rem',
@@ -1411,8 +1411,8 @@ const LandingPage = () => {
                             color: '#9ca3af'
                           }}>
                             Select payment account
-                          </div>
-                        </div>
+                  </div>
+                </div>
                         <button style={{
                           width: '100%',
                           padding: '0.625rem',
@@ -1496,7 +1496,7 @@ const LandingPage = () => {
         </video>
         
         {/* Dark Overlay */}
-        <div style={{
+      <div style={{ 
           position: 'absolute',
           top: 0,
           left: 0,
@@ -1531,10 +1531,10 @@ const LandingPage = () => {
 
       {/* Why Choose CEX Section - Card Style */}
       <section style={{ 
-        padding: '5rem 1rem', 
+        padding: '5rem 1rem',
         background: '#0a1628', 
         borderTop: '1px solid #e5e7eb'
-              }}>
+      }}>
         <div style={{ 
           maxWidth: '1120px', 
           margin: '0 auto'
@@ -1550,7 +1550,7 @@ const LandingPage = () => {
             Why Choose CEX?
           </h2>
           
-              <div style={{ 
+          <div style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 gap: '1rem'
@@ -1583,29 +1583,29 @@ const LandingPage = () => {
                 position: 'relative',
                 zIndex: 1,
                 width: '100%',
-                display: 'grid',
+            display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
                 gap: '2rem',
                 alignItems: 'center'
-                }}>
-                  <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center',
+          }}>
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'center',
                   alignItems: 'center',
                   backgroundColor: 'transparent'
-                }}>
-                  <img 
+              }}>
+                <img 
                     src={shieldImg} 
                     alt="Shield" 
-                    style={{
+                  style={{ 
                       width: '400px',
                       height: '400px',
                       objectFit: 'contain',
                       backgroundColor: 'transparent',
                       display: 'block'
-                    }}
-                  />
-                  </div>
+                  }} 
+                />
+              </div>
                 <div>
                 <div style={{ 
                   display: 'flex', 
@@ -1623,15 +1623,15 @@ const LandingPage = () => {
                       SECURITY
                     </span>
                   </div>
-                  <h3 style={{
+              <h3 style={{ 
                     fontSize: '1.5rem',
                     fontWeight: '400',
                     color: 'white',
                     marginBottom: '1rem',
                     lineHeight: '1.3'
-                  }}>
+              }}>
                     Bank-Level Security. Your Crypto, Protected.
-                  </h3>
+              </h3>
                   <p style={{
                     fontSize: '1rem',
                     color: 'rgba(255, 255, 255, 0.9)',
@@ -1639,13 +1639,13 @@ const LandingPage = () => {
                     margin: 0
                   }}>
                     We offer bank-level security with encrypted transactions and secure wallet storage protecting your assets. Founded in 2024, CEX has maintained a clean security record, emphasizing trust and reliability. Your assets are protected with industry-leading security measures—256-bit encryption, multi-factor authentication, and cold storage wallets.
-                  </p>
+              </p>
                 </div>
               </div>
             </div>
-
+            
             {/* Card 2 - Speed */}
-      <div style={{ 
+              <div style={{ 
               background: 'linear-gradient(135deg, #1a0f08 0%, #3d2817 30%, #1e3a5f 60%, #0a1628 100%)',
               borderRadius: '1rem',
               paddingLeft: '6.5rem',
@@ -1679,8 +1679,8 @@ const LandingPage = () => {
               }}>
                 <div>
                   <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
+                display: 'flex',
+                alignItems: 'center',
                     gap: '0.75rem',
             marginBottom: '1rem'
           }}>
@@ -1714,27 +1714,27 @@ const LandingPage = () => {
                 </div>
                 <div style={{
                   display: 'flex',
-                  justifyContent: 'center',
+                justifyContent: 'center',
                   alignItems: 'center',
                   backgroundColor: 'transparent'
-                }}>
-                  <img 
+              }}>
+                <img 
                     src={speedImg} 
                     alt="Speed" 
-                    style={{
+                  style={{ 
                       width: '400px',
                       height: '400px',
                       objectFit: 'contain',
                       backgroundColor: 'transparent',
                       display: 'block'
-                    }}
-                  />
-                </div>
+                  }} 
+                />
+              </div>
               </div>
             </div>
             
             {/* Card 3 - Rates */}
-          <div style={{ 
+              <div style={{ 
               background: 'linear-gradient(135deg, #0a1628 0%, #1e3a5f 30%, #3d2817 70%, #1a0f08 100%)',
               borderRadius: '1rem',
               paddingRight: '5.5rem',
@@ -1743,7 +1743,7 @@ const LandingPage = () => {
               overflow: 'hidden',
               position: 'relative',
               minHeight: '300px',
-              display: 'flex',
+                display: 'flex',
               alignItems: 'center'
             }}>
               {/* Dark overlay for readability */}
@@ -1800,8 +1800,8 @@ const LandingPage = () => {
                   }}>
                     RATES
                   </span>
-                </div>
-                <h3 style={{
+              </div>
+              <h3 style={{ 
                   fontSize: '1.5rem',
                   fontWeight: '400',
                   color: 'white',
@@ -1820,7 +1820,7 @@ const LandingPage = () => {
               </p>
             </div>
           </div>
-            </div>
+        </div>
             
             {/* Card 4 - Join Users Banner */}
               <div style={{ 
@@ -1848,7 +1848,7 @@ const LandingPage = () => {
                   color: '#00CDCB'
                 }}>1M+</span>
                 <span>users. Get started today.</span>
-              </div>
+      </div>
               <Link
                 to="/account-type"
                   style={{ 
@@ -1903,7 +1903,7 @@ const LandingPage = () => {
             marginBottom: '1rem'
               }}>
             OUR VISION
-            </div>
+              </div>
             
           {/* Main Vision Statement */}
           <h2 style={{
@@ -1933,7 +1933,7 @@ const LandingPage = () => {
                 backgroundColor: 'transparent'
                   }} 
                 />
-              </div>
+            </div>
 
           {/* Statistics */}
           <div style={{
@@ -1952,7 +1952,7 @@ const LandingPage = () => {
                 marginBottom: '0.5rem'
               }}>
                 Founded in
-            </div>
+              </div>
               <div style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: '400',
@@ -1960,8 +1960,8 @@ const LandingPage = () => {
                 lineHeight: '1'
               }}>
                 2024
-        </div>
-      </div>
+            </div>
+              </div>
 
             {/* Users */}
             <div>
@@ -1972,7 +1972,7 @@ const LandingPage = () => {
                 marginBottom: '0.5rem'
               }}>
                 Users
-              </div>
+            </div>
               <div style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: '400',
@@ -1980,10 +1980,10 @@ const LandingPage = () => {
                 lineHeight: '1'
               }}>
                 1M+
-            </div>
+          </div>
               </div>
-            </div>
-              </div>
+          </div>
+        </div>
       </section>
 
       {/* FAQ Section */}

@@ -290,12 +290,12 @@ const SignUp = () => {
               </div>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', flexWrap: 'wrap', gap: '0.25rem' }}>
               <input type="checkbox" required style={{ marginRight: '0.5rem' }} />
-              I agree to the{' '}
-              <a href="#" style={{ color: '#00CDCB', textDecoration: 'none' }}>Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" style={{ color: '#00CDCB', textDecoration: 'none' }}>Privacy Policy</a>
+              <span>I agree to the</span>
+              <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" style={{ color: '#00CDCB', textDecoration: 'none' }}>Terms of Service</a>
+              <span>and</span>
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#00CDCB', textDecoration: 'none' }}>Privacy Policy</a>
             </label>
 
             <button
