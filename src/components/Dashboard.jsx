@@ -321,9 +321,12 @@ const Dashboard = () => {
   })
   
 
-  // Load chart data for all cryptos
+  // Load chart data for all cryptos with caching
   useEffect(() => {
-    const loadAllChartData = async () => {
+    const CACHE_KEY = 'crypto_chart_data_cache'
+    const CACHE_DURATION = 3600000 // 1 hour in milliseconds
+    
+    const loadAllChartData = async (forceRefresh = false, retryFailed = false) => {
       const coinGeckoMap = {
         'bitcoin': 'bitcoin',
         'ethereum': 'ethereum',
@@ -333,6 +336,33 @@ const Dashboard = () => {
         'solana': 'solana'
       }
       
+      // Try to load from cache first (unless forcing refresh or retrying failed)
+      if (!forceRefresh && !retryFailed) {
+        try {
+          const cachedDataStr = localStorage.getItem(CACHE_KEY)
+          if (cachedDataStr) {
+            const cachedData = JSON.parse(cachedDataStr)
+            const cacheAge = Date.now() - cachedData.timestamp
+            
+            // If cache is less than 1 hour old, use it
+            if (cacheAge < CACHE_DURATION && cachedData.data) {
+              console.log('Using cached chart data')
+              setCryptoChartData(cachedData.data)
+              
+              // Still fetch new data in background if cache is getting old (>50 minutes)
+              if (cacheAge > 3000000) { // 50 minutes
+                setTimeout(() => loadAllChartData(true, false), 0)
+              }
+              return
+            }
+          }
+        } catch (error) {
+          console.error('Error reading chart cache:', error)
+        }
+      }
+      
+      // Fetch fresh data from API
+      console.log('Fetching fresh chart data from API')
       const chartDataPromises = Object.keys(coinGeckoMap).map(async (coinId) => {
         try {
           const geckoId = coinGeckoMap[coinId]
@@ -353,17 +383,81 @@ const Dashboard = () => {
           }
         } catch (error) {
           console.error(`Failed to load chart data for ${coinId}:`, error)
+          
+          // If request failed, try to use cached data for this coin
+          if (!retryFailed) {
+            try {
+              const cachedDataStr = localStorage.getItem(CACHE_KEY)
+              if (cachedDataStr) {
+                const cachedData = JSON.parse(cachedDataStr)
+                if (cachedData.data && cachedData.data[coinId]) {
+                  console.log(`Using cached data for ${coinId} due to API failure`)
+                  return { [coinId]: cachedData.data[coinId] }
+                }
+              }
+            } catch (cacheError) {
+              console.error(`Error reading cached data for ${coinId}:`, cacheError)
+            }
+          }
+          
+          // If retrying failed requests, return empty data
           return { [coinId]: { prices: [], labels: [] } }
         }
       })
       
       const results = await Promise.all(chartDataPromises)
       const combinedData = results.reduce((acc, item) => ({ ...acc, ...item }), {})
-      setCryptoChartData(combinedData)
+      
+      // Check if we got valid data (at least some coins have data)
+      const hasValidData = Object.values(combinedData).some(coinData => 
+        coinData.prices && coinData.prices.length > 0
+      )
+      
+      if (hasValidData) {
+        // Save to cache with timestamp
+        try {
+          const cacheData = {
+            timestamp: Date.now(),
+            data: combinedData
+          }
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+          console.log('Chart data cached successfully')
+        } catch (error) {
+          console.error('Error saving chart cache:', error)
+        }
+        
+        setCryptoChartData(combinedData)
+      } else {
+        // If all requests failed and we don't have cache, retry immediately
+        if (!retryFailed) {
+          console.log('All chart requests failed, retrying immediately...')
+          setTimeout(() => loadAllChartData(true, true), 1000)
+        } else {
+          // If retry also failed, try to use any available cached data
+          try {
+            const cachedDataStr = localStorage.getItem(CACHE_KEY)
+            if (cachedDataStr) {
+              const cachedData = JSON.parse(cachedDataStr)
+              if (cachedData.data) {
+                console.log('Using cached data after retry failure')
+                setCryptoChartData(cachedData.data)
+              }
+            }
+          } catch (error) {
+            console.error('Error reading cache after retry failure:', error)
+          }
+        }
+      }
     }
     
-    loadAllChartData()
-    const chartInterval = setInterval(loadAllChartData, 3600000) // Update every 1 hour
+    // Load data on mount (will use cache if available)
+    loadAllChartData(false, false)
+    
+    // Set up interval to refresh every hour
+    const chartInterval = setInterval(() => {
+      loadAllChartData(true, false)
+    }, 3600000) // Update every 1 hour
+    
     return () => clearInterval(chartInterval)
   }, [])
 
@@ -2415,19 +2509,6 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {isExchanging && (
-                <div style={{
-                  marginBottom: '1rem',
-                  padding: '0.75rem',
-                  backgroundColor: '#fef3c7',
-                  border: '1px solid #fbbf24',
-                  borderRadius: '0.375rem',
-                  color: '#92400e',
-                  fontSize: '0.875rem'
-                }}>
-                  An exchange is currently in progress. Please wait for it to complete before starting a new exchange.
-                </div>
-              )}
               <button
                 type="submit"
                 disabled={loading || !isFormValid() || isExchanging}
@@ -3252,6 +3333,50 @@ const Dashboard = () => {
                 )
               }
 
+              // Calculate min and max from actual data
+              const prices = chartData.prices.filter(p => p > 0 && !isNaN(p))
+              if (prices.length === 0) {
+                return (
+                  <div style={{
+                    height: '300px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '0.75rem',
+                    marginBottom: '2rem'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>No chart data available</div>
+                  </div>
+                )
+              }
+              
+              const minPrice = Math.min(...prices)
+              const maxPrice = Math.max(...prices)
+              const priceRange = maxPrice - minPrice
+              
+              // Add padding (5% on each side) to make chart more readable
+              const padding = priceRange > 0 ? priceRange * 0.05 : (maxPrice * 0.0001) // Use 0.01% if range is 0
+              const yMin = Math.max(0, minPrice - padding)
+              const yMax = maxPrice + padding
+              
+              // Calculate appropriate step size for Y-axis ticks
+              // For small ranges (like Tether), use smaller steps
+              const decimals = selectedCryptoDetails.decimals || 2
+              let stepSize
+              if (priceRange < 0.01) {
+                // Very small range (like Tether around $1.00)
+                stepSize = Math.pow(10, -decimals) * 2 // e.g., 0.0002 for 4 decimals
+              } else if (priceRange < 1) {
+                stepSize = 0.01
+              } else if (priceRange < 10) {
+                stepSize = 0.1
+              } else if (priceRange < 100) {
+                stepSize = 1
+              } else {
+                stepSize = undefined // Let Chart.js auto-calculate for large ranges
+              }
+
               const chartConfig = {
                 labels: chartData.labels,
                 datasets: [{
@@ -3311,6 +3436,8 @@ const Dashboard = () => {
                           },
                           y: {
                             display: true,
+                            min: yMin,
+                            max: yMax,
                             grid: {
                               color: '#e5e7eb'
                             },
@@ -3318,7 +3445,8 @@ const Dashboard = () => {
                               callback: function(value) {
                                 const decimals = selectedCryptoDetails.decimals || 2
                                 return '$' + value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-                              }
+                              },
+                              stepSize: stepSize
                             }
                           }
                         },
