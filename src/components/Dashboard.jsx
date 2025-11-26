@@ -585,14 +585,14 @@ const Dashboard = () => {
       return
     }
     
-    // Map crypto IDs to symbols for API (define before validation)
+    // Map crypto IDs to category names for API (define before validation)
     const cryptoSymbolMap = {
-      'bitcoin': 'BTC',
-      'ethereum': 'ETH',
-      'tether': 'USDT',
+      'bitcoin': 'BITCOIN',
+      'ethereum': 'ETHEREUM',
+      'tether': 'TETHER',
       'ripple': 'XRP',
       'binancecoin': 'BNB',
-      'solana': 'SOL'
+      'solana': 'SOLANA'
     }
 
     // Validate crypto category mapping BEFORE setting any flags
