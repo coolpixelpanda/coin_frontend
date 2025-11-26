@@ -361,16 +361,18 @@ const Dashboard = () => {
         }
       }
       
-      // Fetch fresh data from API
+      // Fetch fresh data from API with retry logic
       console.log('Fetching fresh chart data from API')
-      const chartDataPromises = Object.keys(coinGeckoMap).map(async (coinId) => {
+      
+      // Helper function to fetch chart data with retry
+      const fetchChartDataWithRetry = async (coinId, geckoId, retryCount = 0, maxRetries = 3) => {
         try {
-          const geckoId = coinGeckoMap[coinId]
           const historyData = await cryptoAPI.getCoinGeckoHistory(geckoId, 1)
           // API returns array of { timestamp, price } objects
           const prices = Array.isArray(historyData) ? historyData : []
           const last24Hours = prices.slice(-24)
           
+          console.log(`Successfully loaded chart data for ${coinId}`)
           return {
             [coinId]: {
               prices: last24Hours.map(item => item.price || 0),
@@ -382,31 +384,73 @@ const Dashboard = () => {
             }
           }
         } catch (error) {
-          console.error(`Failed to load chart data for ${coinId}:`, error)
+          console.error(`Failed to load chart data for ${coinId} (attempt ${retryCount + 1}/${maxRetries + 1}):`, error)
           
-          // If request failed, try to use cached data for this coin
-          if (!retryFailed) {
-            try {
-              const cachedDataStr = localStorage.getItem(CACHE_KEY)
-              if (cachedDataStr) {
-                const cachedData = JSON.parse(cachedDataStr)
-                if (cachedData.data && cachedData.data[coinId]) {
-                  console.log(`Using cached data for ${coinId} due to API failure`)
-                  return { [coinId]: cachedData.data[coinId] }
-                }
+          // Check if it's a rate limit error (429)
+          const isRateLimit = error?.status === 429 || error?.response?.status === 429
+          const retryAfter = error?.headers?.['retry-after'] || error?.response?.headers?.['retry-after']
+          
+          // If we haven't exceeded max retries, retry
+          if (retryCount < maxRetries) {
+            // Calculate delay: respect Retry-After header for 429, otherwise exponential backoff
+            let delay
+            if (isRateLimit) {
+              if (retryAfter) {
+                delay = parseInt(retryAfter) * 1000 // Convert seconds to milliseconds
+                console.log(`Rate limited for ${coinId}, waiting ${retryAfter} seconds before retry`)
+              } else {
+                delay = 60000 // Default 60 seconds for rate limit
+                console.log(`Rate limited for ${coinId}, waiting 60 seconds before retry`)
               }
-            } catch (cacheError) {
-              console.error(`Error reading cached data for ${coinId}:`, cacheError)
+            } else {
+              delay = Math.min(1000 * Math.pow(2, retryCount), 10000) // Exponential backoff: 1s, 2s, 4s, max 10s
+              console.log(`Retrying ${coinId} in ${delay/1000} seconds...`)
             }
+            
+            await new Promise(resolve => setTimeout(resolve, delay))
+            console.log(`Retrying chart data fetch for ${coinId} (attempt ${retryCount + 2})...`)
+            return fetchChartDataWithRetry(coinId, geckoId, retryCount + 1, maxRetries)
           }
           
-          // If retrying failed requests, return empty data
+          // If all retries failed, try to use cached data for this coin
+          try {
+            const cachedDataStr = localStorage.getItem(CACHE_KEY)
+            if (cachedDataStr) {
+              const cachedData = JSON.parse(cachedDataStr)
+              if (cachedData.data && cachedData.data[coinId]) {
+                console.log(`Using cached data for ${coinId} after all retries failed`)
+                return { [coinId]: cachedData.data[coinId] }
+              }
+            }
+          } catch (cacheError) {
+            console.error(`Error reading cached data for ${coinId}:`, cacheError)
+          }
+          
+          // Return empty data if everything failed
+          console.warn(`Could not load chart data for ${coinId} after ${maxRetries + 1} attempts`)
           return { [coinId]: { prices: [], labels: [] } }
         }
+      }
+      
+      const chartDataPromises = Object.keys(coinGeckoMap).map(async (coinId) => {
+        const geckoId = coinGeckoMap[coinId]
+        return fetchChartDataWithRetry(coinId, geckoId, 0, 3)
       })
       
       const results = await Promise.all(chartDataPromises)
       const combinedData = results.reduce((acc, item) => ({ ...acc, ...item }), {})
+      
+      // Update chart data immediately with whatever we got (even partial data)
+      // This ensures charts display as soon as data is available
+      const currentChartData = { ...cryptoChartData }
+      Object.keys(combinedData).forEach(coinId => {
+        const coinData = combinedData[coinId]
+        // Only update if we got valid data
+        if (coinData.prices && coinData.prices.length > 0) {
+          currentChartData[coinId] = coinData
+        }
+      })
+      setCryptoChartData(currentChartData)
       
       // Check if we got valid data (at least some coins have data)
       const hasValidData = Object.values(combinedData).some(coinData => 
@@ -425,27 +469,19 @@ const Dashboard = () => {
         } catch (error) {
           console.error('Error saving chart cache:', error)
         }
-        
-        setCryptoChartData(combinedData)
       } else {
-        // If all requests failed and we don't have cache, retry immediately
-        if (!retryFailed) {
-          console.log('All chart requests failed, retrying immediately...')
-          setTimeout(() => loadAllChartData(true, true), 1000)
-        } else {
-          // If retry also failed, try to use any available cached data
-          try {
-            const cachedDataStr = localStorage.getItem(CACHE_KEY)
-            if (cachedDataStr) {
-              const cachedData = JSON.parse(cachedDataStr)
-              if (cachedData.data) {
-                console.log('Using cached data after retry failure')
-                setCryptoChartData(cachedData.data)
-              }
+        // If no valid data was retrieved, try to use cached data
+        try {
+          const cachedDataStr = localStorage.getItem(CACHE_KEY)
+          if (cachedDataStr) {
+            const cachedData = JSON.parse(cachedDataStr)
+            if (cachedData.data) {
+              console.log('Using cached data after all requests failed')
+              setCryptoChartData(cachedData.data)
             }
-          } catch (error) {
-            console.error('Error reading cache after retry failure:', error)
           }
+        } catch (error) {
+          console.error('Error reading cache after failure:', error)
         }
       }
     }

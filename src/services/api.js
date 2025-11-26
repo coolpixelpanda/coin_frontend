@@ -292,7 +292,16 @@ export const cryptoAPI = {
       return allData
     } catch (error) {
       console.error('CoinGecko History API error:', error.response?.data || error.message)
-      throw error.response?.data || error.message
+      // Preserve the full error object so we can access status codes and headers for retry logic
+      if (error.response) {
+        const enhancedError = new Error(error.response?.data?.error || error.message)
+        enhancedError.status = error.response.status
+        enhancedError.statusText = error.response.statusText
+        enhancedError.headers = error.response.headers
+        enhancedError.responseData = error.response.data
+        throw enhancedError
+      }
+      throw error
     }
   },
 
