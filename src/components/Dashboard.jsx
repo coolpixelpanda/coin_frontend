@@ -443,45 +443,122 @@ const Dashboard = () => {
       // Update chart data immediately with whatever we got (even partial data)
       // This ensures charts display as soon as data is available
       const currentChartData = { ...cryptoChartData }
-      Object.keys(combinedData).forEach(coinId => {
+      const missingCoins = []
+      
+      Object.keys(coinGeckoMap).forEach(coinId => {
         const coinData = combinedData[coinId]
-        // Only update if we got valid data
-        if (coinData.prices && coinData.prices.length > 0) {
+        // Check if we got valid data
+        if (coinData && coinData.prices && coinData.prices.length > 0) {
           currentChartData[coinId] = coinData
+        } else {
+          // This coin is missing data
+          missingCoins.push(coinId)
+          
+          // Try to use cached data for this coin if available
+          try {
+            const cachedDataStr = localStorage.getItem(CACHE_KEY)
+            if (cachedDataStr) {
+              const cachedData = JSON.parse(cachedDataStr)
+              if (cachedData.data && cachedData.data[coinId]) {
+                console.log(`Using cached data for ${coinId} while retrying`)
+                currentChartData[coinId] = cachedData.data[coinId]
+              }
+            }
+          } catch (cacheError) {
+            console.error(`Error reading cached data for ${coinId}:`, cacheError)
+          }
         }
       })
+      
+      // Update state with available data (including cached data)
       setCryptoChartData(currentChartData)
       
-      // Check if we got valid data (at least some coins have data)
-      const hasValidData = Object.values(combinedData).some(coinData => 
-        coinData.prices && coinData.prices.length > 0
-      )
+      // If any coins are missing data, retry them automatically after a short delay
+      if (missingCoins.length > 0 && !retryFailed) {
+        const retryDelay = Math.min(2000 + (missingCoins.length * 500), 5000) // 2-5 seconds based on number of missing coins
+        console.log(`Missing chart data for ${missingCoins.length} coin(s): ${missingCoins.join(', ')}. Retrying in ${retryDelay/1000} seconds...`)
+        
+        setTimeout(async () => {
+          // Retry only the missing coins
+          const retryPromises = missingCoins.map(async (coinId) => {
+            const geckoId = coinGeckoMap[coinId]
+            return fetchChartDataWithRetry(coinId, geckoId, 0, 3)
+          })
+          
+          const retryResults = await Promise.all(retryPromises)
+          const retryCombinedData = retryResults.reduce((acc, item) => ({ ...acc, ...item }), {})
+          
+          // Update chart data with retry results
+          const updatedChartData = { ...cryptoChartData }
+          const stillMissingCoins = []
+          
+          Object.keys(retryCombinedData).forEach(coinId => {
+            const coinData = retryCombinedData[coinId]
+            if (coinData.prices && coinData.prices.length > 0) {
+              updatedChartData[coinId] = coinData
+              console.log(`Successfully loaded chart data for ${coinId} on retry`)
+            } else {
+              stillMissingCoins.push(coinId)
+            }
+          })
+          
+          setCryptoChartData(updatedChartData)
+          
+          // If still missing, retry again (but with longer delay to avoid rate limits)
+          if (stillMissingCoins.length > 0) {
+            console.log(`Still missing data for ${stillMissingCoins.length} coin(s). Will retry again...`)
+            setTimeout(() => {
+              loadAllChartData(true, true)
+            }, 10000) // Wait 10 seconds before next retry to avoid rate limits
+          } else {
+            // All charts loaded successfully, save to cache
+            try {
+              const cacheData = {
+                timestamp: Date.now(),
+                data: updatedChartData
+              }
+              localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+              console.log('All chart data loaded and cached successfully')
+            } catch (error) {
+              console.error('Error saving chart cache:', error)
+            }
+          }
+        }, retryDelay)
+      }
       
-      if (hasValidData) {
-        // Save to cache with timestamp
+      // Save valid data to cache
+      const validData = {}
+      Object.keys(combinedData).forEach(coinId => {
+        const coinData = combinedData[coinId]
+        if (coinData.prices && coinData.prices.length > 0) {
+          validData[coinId] = coinData
+        }
+      })
+      
+      if (Object.keys(validData).length > 0) {
         try {
+          // Merge with existing cache to preserve data for coins that weren't fetched
+          const cachedDataStr = localStorage.getItem(CACHE_KEY)
+          let existingCache = {}
+          if (cachedDataStr) {
+            try {
+              const cachedData = JSON.parse(cachedDataStr)
+              if (cachedData.data) {
+                existingCache = cachedData.data
+              }
+            } catch (e) {
+              // Ignore cache parse errors
+            }
+          }
+          
           const cacheData = {
             timestamp: Date.now(),
-            data: combinedData
+            data: { ...existingCache, ...validData }
           }
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
           console.log('Chart data cached successfully')
         } catch (error) {
           console.error('Error saving chart cache:', error)
-        }
-      } else {
-        // If no valid data was retrieved, try to use cached data
-        try {
-          const cachedDataStr = localStorage.getItem(CACHE_KEY)
-          if (cachedDataStr) {
-            const cachedData = JSON.parse(cachedDataStr)
-            if (cachedData.data) {
-              console.log('Using cached data after all requests failed')
-              setCryptoChartData(cachedData.data)
-            }
-          }
-        } catch (error) {
-          console.error('Error reading cache after failure:', error)
         }
       }
     }
