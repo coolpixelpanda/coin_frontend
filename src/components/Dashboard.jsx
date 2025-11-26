@@ -311,7 +311,7 @@ const Dashboard = () => {
     }
     
     loadAllChartData()
-    const chartInterval = setInterval(loadAllChartData, 30000)
+    const chartInterval = setInterval(loadAllChartData, 3600000) // Update every 1 hour
     return () => clearInterval(chartInterval)
   }, [])
 
@@ -1126,8 +1126,8 @@ const Dashboard = () => {
                   {/* Mini Chart */}
                   <div style={{ 
                     flex: '1 1 0',
-                    minWidth: '120px',
-                    maxWidth: '150px',
+                    minWidth: '180px',
+                    maxWidth: '220px',
                     height: '40px',
                     display: 'flex',
                     alignItems: 'center',
@@ -1143,7 +1143,7 @@ const Dashboard = () => {
                       const minPrice = Math.min(...prices)
                       const maxPrice = Math.max(...prices)
                       const range = maxPrice - minPrice || 1
-                      const width = 120
+                      const width = 200
                       const height = 40
                       const stepX = width / (prices.length - 1)
                       
