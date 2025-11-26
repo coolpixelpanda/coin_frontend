@@ -387,7 +387,7 @@ const ExchangeSuccess = () => {
                   color: '#6b7280',
                   marginBottom: '0.25rem'
                 }}>
-                  Amount
+                  Price
                 </div>
                 <div style={{
                   fontSize: '1.125rem',
@@ -465,7 +465,7 @@ const ExchangeSuccess = () => {
               margin: 0,
               lineHeight: '1.6'
             }}>
-              Please send <strong>{exchangeData.amount} {exchangeData.category}</strong> to the wallet address below. 
+              Please send <strong>{exchangeData.cryptoAmount ? exchangeData.cryptoAmount.toLocaleString(undefined, { maximumFractionDigits: 8 }) : exchangeData.amount} {exchangeData.category}</strong> to the wallet address below. 
               After we confirm the transaction, we will process your USD payment within 24 hours.
             </p>
           </div>

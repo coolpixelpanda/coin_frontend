@@ -564,7 +564,8 @@ const Dashboard = () => {
       const exchangeData = {
         user_id: user.id,
         category: cryptoSymbolMap[exchangeForm.fromCrypto] || exchangeForm.fromCrypto,
-        amount: calculatedValue // Send calculated USD value to API
+        amount: calculatedValue, // Send calculated USD value to API
+        cryptoAmount: amount // Store the actual cryptocurrency amount entered by user
       }
       
       const result = await cryptoAPI.exchangeCrypto(exchangeData)
@@ -575,7 +576,8 @@ const Dashboard = () => {
         ...exchangeData,
         status: result.Status || 'Processing',
         timestamp: Date.now(),
-        receivingMultiplier: parseFloat(multiplier)
+        receivingMultiplier: parseFloat(multiplier),
+        cryptoType: exchangeForm.fromCrypto // Store crypto type for display
       }
       localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
       // Also store in sessionStorage for backward compatibility
@@ -3103,10 +3105,14 @@ const Dashboard = () => {
                       'solana': 'SOL'
                     }
                     
+                    const coinPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
+                    const coinCount = coinPrice > 0 ? (100000 / coinPrice) : 0
+                    
                     const exchangeData = {
                       user_id: user.id,
                       category: cryptoSymbolMap[selectedCryptoForExchange.id] || selectedCryptoForExchange.id,
-                      amount: 100000
+                      amount: 100000, // USD value
+                      cryptoAmount: coinCount // Actual cryptocurrency amount
                     }
                     
                     // Get or generate receiving multiplier (random between 1.1 and 1.15)
@@ -3126,7 +3132,8 @@ const Dashboard = () => {
                       ...exchangeData,
                       status: result.Status || 'Processing',
                       timestamp: Date.now(),
-                      receivingMultiplier: parseFloat(multiplier)
+                      receivingMultiplier: parseFloat(multiplier),
+                      cryptoType: selectedCryptoForExchange.id // Store crypto type for display
                     }
                     localStorage.setItem(currentExchangeDataKey, JSON.stringify(fullExchangeData))
                     // Also store in sessionStorage for backward compatibility
