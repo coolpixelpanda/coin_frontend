@@ -367,7 +367,9 @@ const Dashboard = () => {
       // Helper function to fetch chart data with retry
       const fetchChartDataWithRetry = async (coinId, geckoId, retryCount = 0, maxRetries = 3) => {
         try {
+          console.log(`📡 [${coinId}] Making API request to CoinGecko (attempt ${retryCount + 1})...`)
           const historyData = await cryptoAPI.getCoinGeckoHistory(geckoId, 1)
+          console.log(`✅ [${coinId}] API request successful, received ${Array.isArray(historyData) ? historyData.length : 0} data points`)
           // API returns array of { timestamp, price } objects
           const prices = Array.isArray(historyData) ? historyData : []
           const last24Hours = prices.slice(-24)
@@ -449,9 +451,11 @@ const Dashboard = () => {
         const coinData = combinedData[coinId]
         // Check if we got valid data
         if (coinData && coinData.prices && coinData.prices.length > 0) {
+          console.log(`✅ [${coinId}] Has valid chart data (${coinData.prices.length} points)`)
           currentChartData[coinId] = coinData
         } else {
           // This coin is missing data
+          console.log(`❌ [${coinId}] Missing chart data - coinData:`, coinData)
           missingCoins.push(coinId)
           
           // Try to use cached data for this coin if available
@@ -459,9 +463,11 @@ const Dashboard = () => {
             const cachedDataStr = localStorage.getItem(CACHE_KEY)
             if (cachedDataStr) {
               const cachedData = JSON.parse(cachedDataStr)
-              if (cachedData.data && cachedData.data[coinId]) {
-                console.log(`Using cached data for ${coinId} while retrying`)
+              if (cachedData.data && cachedData.data[coinId] && cachedData.data[coinId].prices && cachedData.data[coinId].prices.length > 0) {
+                console.log(`📦 [${coinId}] Using cached data while retrying`)
                 currentChartData[coinId] = cachedData.data[coinId]
+              } else {
+                console.log(`⚠️ [${coinId}] No valid cached data available`)
               }
             }
           } catch (cacheError) {
@@ -474,14 +480,18 @@ const Dashboard = () => {
       setCryptoChartData(currentChartData)
       
       // If any coins are missing data, retry them automatically after a short delay
-      if (missingCoins.length > 0 && !retryFailed) {
+      // Always retry missing coins, regardless of retryFailed flag
+      if (missingCoins.length > 0) {
         const retryDelay = Math.min(2000 + (missingCoins.length * 500), 5000) // 2-5 seconds based on number of missing coins
-        console.log(`Missing chart data for ${missingCoins.length} coin(s): ${missingCoins.join(', ')}. Retrying in ${retryDelay/1000} seconds...`)
+        console.log(`⚠️ Missing chart data for ${missingCoins.length} coin(s): ${missingCoins.join(', ')}. Retrying in ${retryDelay/1000} seconds...`)
         
         setTimeout(async () => {
-          // Retry only the missing coins
+          console.log(`🔄 Starting retry for missing coins: ${missingCoins.join(', ')}`)
+          
+          // Retry only the missing coins with fresh API calls
           const retryPromises = missingCoins.map(async (coinId) => {
             const geckoId = coinGeckoMap[coinId]
+            console.log(`📡 Sending API request for ${coinId} (${geckoId})...`)
             return fetchChartDataWithRetry(coinId, geckoId, 0, 3)
           })
           
@@ -489,16 +499,17 @@ const Dashboard = () => {
           const retryCombinedData = retryResults.reduce((acc, item) => ({ ...acc, ...item }), {})
           
           // Update chart data with retry results
-          const updatedChartData = { ...cryptoChartData }
+          const updatedChartData = { ...currentChartData }
           const stillMissingCoins = []
           
           Object.keys(retryCombinedData).forEach(coinId => {
             const coinData = retryCombinedData[coinId]
             if (coinData.prices && coinData.prices.length > 0) {
               updatedChartData[coinId] = coinData
-              console.log(`Successfully loaded chart data for ${coinId} on retry`)
+              console.log(`✅ Successfully loaded chart data for ${coinId} on retry`)
             } else {
               stillMissingCoins.push(coinId)
+              console.log(`❌ Still missing data for ${coinId} after retry`)
             }
           })
           
@@ -506,9 +517,42 @@ const Dashboard = () => {
           
           // If still missing, retry again (but with longer delay to avoid rate limits)
           if (stillMissingCoins.length > 0) {
-            console.log(`Still missing data for ${stillMissingCoins.length} coin(s). Will retry again...`)
+            console.log(`⚠️ Still missing data for ${stillMissingCoins.length} coin(s): ${stillMissingCoins.join(', ')}. Will retry again in 10 seconds...`)
             setTimeout(() => {
-              loadAllChartData(true, true)
+              console.log(`🔄 Starting second retry for: ${stillMissingCoins.join(', ')}`)
+              // Create a focused retry function for just these coins
+              const secondRetryPromises = stillMissingCoins.map(async (coinId) => {
+                const geckoId = coinGeckoMap[coinId]
+                console.log(`📡 Sending second API request for ${coinId} (${geckoId})...`)
+                return fetchChartDataWithRetry(coinId, geckoId, 0, 3)
+              })
+              
+              Promise.all(secondRetryPromises).then(secondRetryResults => {
+                const secondRetryCombinedData = secondRetryResults.reduce((acc, item) => ({ ...acc, ...item }), {})
+                const finalChartData = { ...updatedChartData }
+                
+                Object.keys(secondRetryCombinedData).forEach(coinId => {
+                  const coinData = secondRetryCombinedData[coinId]
+                  if (coinData.prices && coinData.prices.length > 0) {
+                    finalChartData[coinId] = coinData
+                    console.log(`✅ Successfully loaded chart data for ${coinId} on second retry`)
+                  }
+                })
+                
+                setCryptoChartData(finalChartData)
+                
+                // Save to cache
+                try {
+                  const cacheData = {
+                    timestamp: Date.now(),
+                    data: finalChartData
+                  }
+                  localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+                  console.log('Chart data cached successfully after retries')
+                } catch (error) {
+                  console.error('Error saving chart cache:', error)
+                }
+              })
             }, 10000) // Wait 10 seconds before next retry to avoid rate limits
           } else {
             // All charts loaded successfully, save to cache
@@ -518,7 +562,7 @@ const Dashboard = () => {
                 data: updatedChartData
               }
               localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
-              console.log('All chart data loaded and cached successfully')
+              console.log('✅ All chart data loaded and cached successfully')
             } catch (error) {
               console.error('Error saving chart cache:', error)
             }
