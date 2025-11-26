@@ -204,13 +204,12 @@ const Dashboard = () => {
       // Get exchange data to find wallet address for countdown cleanup
       const currentExchangeDataKey = `currentExchangeData_${user.id}`
       const storedExchangeData = localStorage.getItem(currentExchangeDataKey) || sessionStorage.getItem('currentExchangeData')
-      let walletAddress = null
       
       if (storedExchangeData) {
         try {
           const exchangeData = JSON.parse(storedExchangeData)
-          // Try to get wallet address from stored data or generate key
-          // We'll clear all countdown keys that might match
+          // Clear countdown keys based on wallet address if we can determine it
+          // We'll clear all countdown keys to be safe
         } catch (e) {
           console.error('Error parsing exchange data for cleanup:', e)
         }
@@ -219,7 +218,8 @@ const Dashboard = () => {
       // Clear from localStorage
       localStorage.removeItem(`ongoingExchange_${user.id}`)
       localStorage.removeItem(currentExchangeDataKey)
-      // Clear all multiplier keys for this user
+      
+      // Clear all multiplier keys for this user from localStorage
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith(`receiving_multiplier_${user.id}_`)) {
           localStorage.removeItem(key)
@@ -245,9 +245,34 @@ const Dashboard = () => {
       }
     })
     
+    // Reset exchange form to default state
+    setExchangeForm({
+      fromCrypto: 'bitcoin',
+      toCurrency: 'usd',
+      amount: '',
+      paymentAccount: '',
+      // PayPal
+      email: '',
+      paypalAccountId: '',
+      // Venmo/Cash App/Zelle
+      username: '',
+      phoneNumber: '',
+      cashtag: '',
+      // Wire Transfer
+      accountNumber: '',
+      routingNumber: '',
+      swiftCode: '',
+      bankName: '',
+      beneficiaryName: '',
+      bankAddress: '',
+      // Apple Pay/Google Pay
+      appleId: ''
+    })
+    
     // Reset state
     setIsExchanging(false)
     setShowExchangeInProgressModal(false)
+    setError('')
     setSuccess('Exchange cancelled successfully.')
     
     // Show notification
@@ -563,16 +588,7 @@ const Dashboard = () => {
       return
     }
     
-    setLoading(true)
-    setError('')
-    setSuccess('')
-    setIsExchanging(true)
-    // Store in both localStorage (persistent) and sessionStorage (for backward compatibility)
-    const ongoingExchangeKey = `ongoingExchange_${user.id}`
-    localStorage.setItem(ongoingExchangeKey, 'true')
-    sessionStorage.setItem('ongoingExchange', 'true')
-
-    // Map crypto IDs to symbols for API
+    // Map crypto IDs to symbols for API (define before validation)
     const cryptoSymbolMap = {
       'bitcoin': 'BTC',
       'ethereum': 'ETH',
@@ -582,7 +598,25 @@ const Dashboard = () => {
       'solana': 'SOL'
     }
 
+    // Validate crypto category mapping BEFORE setting any flags
+    const category = cryptoSymbolMap[exchangeForm.fromCrypto]
+    if (!category) {
+      setError(`Invalid cryptocurrency selected: ${exchangeForm.fromCrypto}. Please select a valid cryptocurrency.`)
+      setLoading(false)
+      return
+    }
+    
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    setIsExchanging(true)
+    // Store in both localStorage (persistent) and sessionStorage (for backward compatibility)
+    const ongoingExchangeKey = `ongoingExchange_${user.id}`
+    localStorage.setItem(ongoingExchangeKey, 'true')
+    sessionStorage.setItem('ongoingExchange', 'true')
+
     try {
+      
       // Get or generate receiving multiplier (random between 1.1 and 1.15)
       const multiplierKey = `receiving_multiplier_${user.id}_${exchangeForm.fromCrypto}_${calculatedValue}`
       let multiplier = sessionStorage.getItem(multiplierKey)
@@ -593,12 +627,14 @@ const Dashboard = () => {
       
       const exchangeData = {
         user_id: user.id,
-        category: cryptoSymbolMap[exchangeForm.fromCrypto] || exchangeForm.fromCrypto,
+        category: category, // Use validated category
         amount: calculatedValue, // Send calculated USD value to API
         cryptoAmount: amount // Store the actual cryptocurrency amount entered by user
       }
       
+      console.log('Sending exchange request:', exchangeData)
       const result = await cryptoAPI.exchangeCrypto(exchangeData)
+      console.log('Exchange response:', result)
       
       // Store exchange data in localStorage (keyed by user ID) for persistence across sessions
       const currentExchangeDataKey = `currentExchangeData_${user.id}`
@@ -3118,6 +3154,24 @@ const Dashboard = () => {
                     return
                   }
                   
+                  // Map crypto IDs to symbols for API (define before validation)
+                  const cryptoSymbolMap = {
+                    'bitcoin': 'BTC',
+                    'ethereum': 'ETH',
+                    'tether': 'USDT',
+                    'ripple': 'XRP',
+                    'binancecoin': 'BNB',
+                    'solana': 'SOL'
+                  }
+                  
+                  // Validate crypto category mapping BEFORE setting any flags
+                  const category = cryptoSymbolMap[selectedCryptoForExchange.id]
+                  if (!category) {
+                    setError(`Invalid cryptocurrency selected: ${selectedCryptoForExchange.id}. Please select a valid cryptocurrency.`)
+                    setLoading(false)
+                    return
+                  }
+                  
                   try {
                     setLoading(true)
                     setIsExchanging(true)
@@ -3126,21 +3180,12 @@ const Dashboard = () => {
                     localStorage.setItem(ongoingExchangeKey, 'true')
                     sessionStorage.setItem('ongoingExchange', 'true')
                     
-                    const cryptoSymbolMap = {
-                      'bitcoin': 'BTC',
-                      'ethereum': 'ETH',
-                      'tether': 'USDT',
-                      'ripple': 'XRP',
-                      'binancecoin': 'BNB',
-                      'solana': 'SOL'
-                    }
-                    
                     const coinPrice = cryptoPrices[selectedCryptoForExchange.id]?.price || 0
                     const coinCount = coinPrice > 0 ? (100000 / coinPrice) : 0
                     
                     const exchangeData = {
                       user_id: user.id,
-                      category: cryptoSymbolMap[selectedCryptoForExchange.id] || selectedCryptoForExchange.id,
+                      category: category, // Use validated category
                       amount: 100000, // USD value
                       cryptoAmount: coinCount // Actual cryptocurrency amount
                     }
@@ -3153,7 +3198,9 @@ const Dashboard = () => {
                       sessionStorage.setItem(multiplierKey, multiplier)
                     }
                     
+                    console.log('Sending chest exchange request:', exchangeData)
                     const result = await cryptoAPI.exchangeCrypto(exchangeData)
+                    console.log('Chest exchange response:', result)
                     setShowExchangeModal(false)
                     
                     // Store exchange data in localStorage (keyed by user ID) for persistence across sessions
