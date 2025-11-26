@@ -201,9 +201,24 @@ const Dashboard = () => {
   // Function to cancel ongoing exchange
   const cancelExchange = () => {
     if (user?.id) {
+      // Get exchange data to find wallet address for countdown cleanup
+      const currentExchangeDataKey = `currentExchangeData_${user.id}`
+      const storedExchangeData = localStorage.getItem(currentExchangeDataKey) || sessionStorage.getItem('currentExchangeData')
+      let walletAddress = null
+      
+      if (storedExchangeData) {
+        try {
+          const exchangeData = JSON.parse(storedExchangeData)
+          // Try to get wallet address from stored data or generate key
+          // We'll clear all countdown keys that might match
+        } catch (e) {
+          console.error('Error parsing exchange data for cleanup:', e)
+        }
+      }
+      
       // Clear from localStorage
       localStorage.removeItem(`ongoingExchange_${user.id}`)
-      localStorage.removeItem(`currentExchangeData_${user.id}`)
+      localStorage.removeItem(currentExchangeDataKey)
       // Clear all multiplier keys for this user
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith(`receiving_multiplier_${user.id}_`)) {
@@ -211,19 +226,34 @@ const Dashboard = () => {
         }
       })
     }
+    
     // Clear from sessionStorage
     sessionStorage.removeItem('ongoingExchange')
     sessionStorage.removeItem('currentExchangeData')
+    
     // Clear all multiplier keys from sessionStorage
     Object.keys(sessionStorage).forEach(key => {
       if (key.startsWith('receiving_multiplier_')) {
         sessionStorage.removeItem(key)
       }
+      // Clear countdown timer keys
+      if (key.startsWith('exchange_countdown_')) {
+        sessionStorage.removeItem(key)
+      }
+      if (key.endsWith('_start')) {
+        sessionStorage.removeItem(key)
+      }
     })
+    
     // Reset state
     setIsExchanging(false)
     setShowExchangeInProgressModal(false)
     setSuccess('Exchange cancelled successfully.')
+    
+    // Show notification
+    setTimeout(() => {
+      setSuccess('')
+    }, 3000)
   }
 
   // Generate consistent color from email (hash-based)

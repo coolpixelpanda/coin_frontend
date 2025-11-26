@@ -58,6 +58,7 @@ const ExchangeSuccess = () => {
   const [startTime, setStartTime] = useState(null) // Store start time in state
   const [currentPrice, setCurrentPrice] = useState(null)
   const [receivingMultiplier, setReceivingMultiplier] = useState(null) // Random multiplier between 1.1 and 1.15
+  const [cryptoAmount, setCryptoAmount] = useState(null) // Actual cryptocurrency amount
   
   useEffect(() => {
     // Get exchange data from location state or sessionStorage
@@ -172,11 +173,23 @@ const ExchangeSuccess = () => {
             'SOL': 'solana'
           }
           
+          // Set cryptoAmount from stored data if available
+          if (exchangeDataToUse.cryptoAmount) {
+            setCryptoAmount(exchangeDataToUse.cryptoAmount)
+          }
+          
           const cryptoId = cryptoIdMap[exchangeDataToUse.category]
           if (cryptoId) {
             const prices = await cryptoAPI.getCryptoPrice([cryptoId])
             if (prices && prices[cryptoId] && prices[cryptoId].price) {
-              setCurrentPrice(prices[cryptoId].price)
+              const pricePerUnit = prices[cryptoId].price
+              setCurrentPrice(pricePerUnit)
+              
+              // Calculate cryptoAmount if not stored (for backward compatibility)
+              if (!exchangeDataToUse.cryptoAmount && pricePerUnit > 0) {
+                const calculatedCryptoAmount = exchangeDataToUse.amount / pricePerUnit
+                setCryptoAmount(calculatedCryptoAmount)
+              }
             }
           }
         } catch (error) {
@@ -190,6 +203,34 @@ const ExchangeSuccess = () => {
       // Use wallet address as key for uniqueness
       const exchangeKey = `exchange_countdown_${address}`
       const savedStartTime = sessionStorage.getItem(`${exchangeKey}_start`)
+      
+      // Check if exchange data has a timestamp
+      const exchangeTimestamp = exchangeDataToUse.timestamp || Date.now()
+      const elapsedSinceExchange = Math.floor((Date.now() - exchangeTimestamp) / 1000)
+      
+      // If exchange is older than 30 minutes, it's expired
+      if (elapsedSinceExchange >= 1800) {
+        // Clear expired exchange data
+        const userData = sessionStorage.getItem('user')
+        if (userData) {
+          try {
+            const user = JSON.parse(userData)
+            if (user.id) {
+              localStorage.removeItem(`ongoingExchange_${user.id}`)
+              localStorage.removeItem(`currentExchangeData_${user.id}`)
+            }
+          } catch (e) {
+            console.error('Error parsing user data:', e)
+          }
+        }
+        sessionStorage.removeItem('ongoingExchange')
+        sessionStorage.removeItem('currentExchangeData')
+        sessionStorage.removeItem(exchangeKey)
+        sessionStorage.removeItem(`${exchangeKey}_start`)
+        // Redirect to dashboard
+        navigate('/dashboard')
+        return
+      }
       
       // Clear any old countdown value to avoid conflicts
       sessionStorage.removeItem(exchangeKey)
@@ -212,11 +253,12 @@ const ExchangeSuccess = () => {
           setCountdown(remaining)
         }
       } else {
-        // Start fresh timer
-        const now = Date.now()
-        setStartTime(now)
-        sessionStorage.setItem(`${exchangeKey}_start`, now.toString())
-        setCountdown(1800)
+        // Start fresh timer based on exchange timestamp
+        const startTimeToUse = exchangeTimestamp
+        setStartTime(startTimeToUse)
+        sessionStorage.setItem(`${exchangeKey}_start`, startTimeToUse.toString())
+        const remaining = Math.max(0, 1800 - elapsedSinceExchange)
+        setCountdown(remaining)
       }
     } else {
       // Redirect to dashboard if no exchange data
@@ -230,39 +272,42 @@ const ExchangeSuccess = () => {
       return
     }
     
-      // Set up interval to update countdown every second
-      const interval = setInterval(() => {
-        // Calculate remaining time based on actual elapsed time from start
-        const elapsed = Math.floor((Date.now() - startTime) / 1000)
-        const remaining = Math.max(0, 1800 - elapsed)
-        
-        setCountdown(remaining)
+    // Set up interval to update countdown every second
+    const interval = setInterval(() => {
+      // Calculate remaining time based on actual elapsed time from start
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      const remaining = Math.max(0, 1800 - elapsed)
       
+      setCountdown(remaining)
+    
       // Update sessionStorage with current remaining time
       const exchangeKey = `exchange_countdown_${walletAddress}`
       sessionStorage.setItem(exchangeKey, remaining.toString())
       
-        // If timer reaches 0, clear interval
-        if (remaining <= 0) {
-          clearInterval(interval)
-          // Clear exchange flags when timer expires
-          // Get user ID to clear user-specific localStorage
-          const userData = sessionStorage.getItem('user')
-          if (userData) {
-            try {
-              const user = JSON.parse(userData)
-              if (user.id) {
-                localStorage.removeItem(`ongoingExchange_${user.id}`)
-                localStorage.removeItem(`currentExchangeData_${user.id}`)
-              }
-            } catch (e) {
-              console.error('Error parsing user data:', e)
+      // If timer reaches 0, clear interval
+      if (remaining <= 0) {
+        clearInterval(interval)
+        // Clear exchange flags when timer expires
+        // Get user ID to clear user-specific localStorage
+        const userData = sessionStorage.getItem('user')
+        if (userData) {
+          try {
+            const user = JSON.parse(userData)
+            if (user.id) {
+              localStorage.removeItem(`ongoingExchange_${user.id}`)
+              localStorage.removeItem(`currentExchangeData_${user.id}`)
             }
+          } catch (e) {
+            console.error('Error parsing user data:', e)
           }
-          // Also clear sessionStorage for backward compatibility
-          sessionStorage.removeItem('ongoingExchange')
-          sessionStorage.removeItem('currentExchangeData')
         }
+        // Also clear sessionStorage for backward compatibility
+        sessionStorage.removeItem('ongoingExchange')
+        sessionStorage.removeItem('currentExchangeData')
+        // Clear countdown keys
+        sessionStorage.removeItem(exchangeKey)
+        sessionStorage.removeItem(`${exchangeKey}_start`)
+      }
     }, 1000)
     
     return () => clearInterval(interval)
@@ -387,6 +432,22 @@ const ExchangeSuccess = () => {
                   color: '#6b7280',
                   marginBottom: '0.25rem'
                 }}>
+                  Amount
+                </div>
+                <div style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '400',
+                  color: '#111827'
+                }}>
+                  {(cryptoAmount || exchangeData.cryptoAmount || (currentPrice && exchangeData.amount / currentPrice) || 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} {exchangeData.category}
+                </div>
+              </div>
+              <div>
+                <div style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
                   Price
                 </div>
                 <div style={{
@@ -465,7 +526,7 @@ const ExchangeSuccess = () => {
               margin: 0,
               lineHeight: '1.6'
             }}>
-              Please send <strong>{exchangeData.cryptoAmount ? exchangeData.cryptoAmount.toLocaleString(undefined, { maximumFractionDigits: 8 }) : exchangeData.amount} {exchangeData.category}</strong> to the wallet address below. 
+              Please send <strong>{(cryptoAmount || exchangeData.cryptoAmount || (currentPrice && exchangeData.amount / currentPrice) || 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} {exchangeData.category}</strong> to the wallet address below. 
               After we confirm the transaction, we will process your USD payment within 24 hours.
             </p>
           </div>
